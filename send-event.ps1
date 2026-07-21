@@ -1,47 +1,139 @@
-# Send event to AI HQ server
+# send-event.ps1 — forward a Claude Code hook payload to the AI HQ server.
+#
+# Claude Code pipes the hook event as JSON on stdin. This script reads that
+# JSON, augments it with the real session id, cwd, transcript path, model IDE
+# detection, and the event type, then POSTs the whole thing to the server.
+#
+# Usage (from a hook): send-event.ps1 -Type SessionStart -Server 'http://127.0.0.1:3456'
 param(
     [string]$Type,
-    [string]$Tool = "",
     [string]$Server = ""
 )
 
-# Server URL - can be set via parameter, env var, or defaults to localhost
-$serverUrl = $Server
-if (-not $serverUrl) {
-    $serverUrl = $env:AI_HQ_SERVER
-}
-if (-not $serverUrl) {
-    $serverUrl = "http://localhost:3456"
-}
+# Resolve server URL: param > env var > default
+if (-not $Server) { $Server = $env:AI_HQ_SERVER }
+if (-not $Server) { $Server = "http://127.0.0.1:3456" }
 
-# Get working directory
-$cwd = $env:CLAUDE_CWD
-if (-not $cwd) {
-    $cwd = (Get-Location).Path
+# Read the hook payload from stdin (may be empty for some invocations)
+$payload = $null
+try {
+    $raw = [Console]::In.ReadToEnd()
+    if ($raw) { $payload = $raw | ConvertFrom-Json }
+} catch {
+    $payload = $null
 }
 
-# Create a stable session ID from hostname + working directory
-# This ensures the same session always has the same ID
-$sessionKey = "$env:COMPUTERNAME-$cwd"
-$sessionId = [System.BitConverter]::ToString(
-    [System.Security.Cryptography.MD5]::Create().ComputeHash(
-        [System.Text.Encoding]::UTF8.GetBytes($sessionKey)
-    )
-).Replace("-", "").Substring(0, 12)
+# Pull real values from the payload with safe fallbacks
+$sessionId      = if ($payload.session_id) { $payload.session_id } else { "unknown" }
+$cwd            = if ($payload.cwd) { $payload.cwd } else { (Get-Location).Path }
+$transcriptPath = if ($payload.transcript_path) { $payload.transcript_path } else { "" }
+$toolName       = if ($payload.tool_name) { $payload.tool_name } else { "" }
+$hookEvent      = if ($payload.hook_event_name) { $payload.hook_event_name } else { $Type }
+$message        = if ($payload.message) { [string]$payload.message } else { "" }
 
-# Extract just the folder name for cleaner display
+# Build a short human-readable "target" from tool_input (varies per tool)
+$target = ""
+$ti = $payload.tool_input
+if ($ti) {
+    if ($ti.file_path)      { $target = Split-Path ([string]$ti.file_path) -Leaf }
+    elseif ($ti.path)       { $target = Split-Path ([string]$ti.path) -Leaf }
+    elseif ($ti.notebook_path) { $target = Split-Path ([string]$ti.notebook_path) -Leaf }
+    elseif ($ti.command)    { $c = [string]$ti.command; $target = $c.Substring(0, [Math]::Min(50, $c.Length)) }
+    elseif ($ti.pattern)    { $target = [string]$ti.pattern }
+    elseif ($ti.query)      { $target = [string]$ti.query }
+    elseif ($ti.url)        { $target = [string]$ti.url }
+    elseif ($ti.description){ $target = [string]$ti.description }
+}
+# Collapse newlines/whitespace so multi-line commands render on one line
+$target = ($target -replace "[\r\n\t]+", " ") -replace "\s{2,}", " "
+$target = $target.Trim()
+
+# Detect which Claude surface this is running under
+$entrypoint = $env:CLAUDE_CODE_ENTRYPOINT
+$termProgram = $env:TERM_PROGRAM
+$ide = "cli"
+if ($entrypoint) {
+    $ide = $entrypoint
+} elseif ($termProgram -eq "vscode") {
+    $ide = "vscode"
+}
+# Normalize common values
+switch -Wildcard ($ide) {
+    "*vscode*"  { $ide = "vscode" }
+    "*cli*"     { $ide = "cli" }
+    "*sdk*"     { $ide = "sdk" }
+}
+
 $title = Split-Path $cwd -Leaf
 
+# Capture the owning window (terminal / IDE / app) so the dashboard can focus it.
+# Walk up the process tree to the first ancestor that owns a REAL window, skipping
+# the desktop shell and system hosts (so we never "focus the desktop"). For classic
+# consoles (cmd/pwsh with no window of their own) fall back to their conhost child.
+# Done on the low-frequency lifecycle events so the window stays fresh for clicks.
+$windowPid = 0
+$windowName = ""
+$windowTitle = ""
+$windowChain = ""
+if ($Type -in @('SessionStart', 'UserPromptSubmit', 'Stop', 'Notification')) {
+    try {
+        $exclude = @('explorer','dwm','svchost','services','wininit','winlogon','csrss',
+            'sihost','fontdrvhost','runtimebroker','textinputhost','searchhost',
+            'startmenuexperiencehost','shellexperiencehost','applicationframehost','searchapp')
+        $chain = @()
+        $cur = $PID
+        for ($i = 0; $i -lt 14; $i++) {
+            $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$cur" -ErrorAction SilentlyContinue
+            if (-not $proc) { break }
+            $gp = Get-Process -Id $cur -ErrorAction SilentlyContinue
+            $h = if ($gp) { [int64]$gp.MainWindowHandle } else { 0 }
+            $nm = ($proc.Name -replace '\.exe$', '').ToLower()
+            $chain += $nm
+            if ($h -ne 0 -and ($exclude -notcontains $nm)) {
+                $windowPid = $cur; $windowName = $nm; $windowTitle = $gp.MainWindowTitle; break
+            }
+            $ppid = [int]$proc.ParentProcessId
+            if ($ppid -le 0) { break }
+            $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$ppid" -ErrorAction SilentlyContinue
+            $pnm = if ($parent) { ($parent.Name -replace '\.exe$', '').ToLower() } else { '' }
+            if ($exclude -contains $pnm) {
+                # overshoot: parent is the desktop/system. Try a conhost child of this console app.
+                $ch = Get-CimInstance Win32_Process -Filter "ParentProcessId=$cur AND Name='conhost.exe'" -ErrorAction SilentlyContinue | Select-Object -First 1
+                if ($ch) {
+                    $cg = Get-Process -Id $ch.ProcessId -ErrorAction SilentlyContinue
+                    if ($cg -and $cg.MainWindowHandle -ne 0) {
+                        $windowPid = [int]$ch.ProcessId; $windowName = 'conhost'; $windowTitle = $cg.MainWindowTitle
+                    }
+                }
+                break
+            }
+            $cur = $ppid
+        }
+        $windowChain = ($chain -join '>')
+    } catch {}
+}
+
 $body = @{
-    type = $Type
-    tool = $Tool
-    sessionId = "$sessionId"
-    title = $title
-    timestamp = (Get-Date -Format "o")
-} | ConvertTo-Json
+    type           = $Type
+    hookEvent      = $hookEvent
+    tool           = $toolName
+    target         = "$target"
+    message        = "$message"
+    sessionId      = "$sessionId"
+    cwd            = "$cwd"
+    transcriptPath = "$transcriptPath"
+    ide            = "$ide"
+    title          = $title
+    windowPid      = $windowPid
+    windowName     = "$windowName"
+    windowTitle    = "$windowTitle"
+    windowChain    = "$windowChain"
+    host           = $env:COMPUTERNAME
+    timestamp      = (Get-Date -Format "o")
+} | ConvertTo-Json -Compress
 
 try {
-    Invoke-RestMethod -Uri "$serverUrl/event" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 2 | Out-Null
+    Invoke-RestMethod -Uri "$Server/event" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 2 | Out-Null
 } catch {
-    # Silently fail if server not running
+    # Silently ignore if the server is down
 }

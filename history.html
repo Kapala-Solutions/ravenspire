@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI HQ — History</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b0e14">
+<meta name="application-name" content="AI HQ">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AI HQ">
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #141925; --panel2: #1b2130; --border: #262d3d;
+    --text: #e6ebf5; --muted: #8a94a8; --accent: #5b8cff; --green: #35d07f;
+    --amber: #f5b53d; --blue: #4aa8ff; --gray: #6b7488; --red: #ff5c6c; --purple: #b47bff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #10141d, #0b0e14);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .3px; font-weight: 600; }
+  header h1 .dot { color: var(--accent); }
+  .spacer { margin-left: auto; }
+  .toplink {
+    color: var(--muted); text-decoration: none; font-size: 13px; cursor: pointer;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: none;
+  }
+  .toplink:hover { color: var(--text); border-color: var(--accent); }
+  .toplink.active { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,0.12); }
+  .icon-btn {
+    background: var(--panel2); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 8px; width: 34px; height: 34px; font-size: 17px; line-height: 1;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,0.14); transform: rotate(30deg); }
+
+  .wrap { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+  /* summary tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .tile { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .tile .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+  .tile.green .v { color: var(--green); } .tile.blue .v { color: var(--blue); } .tile.amber .v { color: var(--amber); }
+
+  /* charts */
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; margin-bottom: 26px; }
+  .chart-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px 6px; }
+  .chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .chart-head h3 { font-size: 13px; margin: 0; font-weight: 600; }
+  .legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
+  .chart-body { position: relative; }
+  .chart-body svg { display: block; width: 100%; height: auto; }
+  .grid-line { stroke: var(--border); stroke-width: 1; }
+  .axis-label { fill: var(--muted); font-size: 11px; }
+  .plot-line { fill: none; stroke-width: 2; }
+  .hover-line { stroke: var(--gray); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; }
+
+  .chart-tooltip {
+    position: fixed; z-index: 50; pointer-events: none; opacity: 0; transition: opacity .1s;
+    background: #0d1017; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.5); white-space: nowrap;
+  }
+  .chart-tooltip .tt-time { color: var(--muted); margin-bottom: 4px; font-size: 11px; }
+  .chart-tooltip .tt-row { display: flex; align-items: center; gap: 6px; }
+  .chart-tooltip .tt-row i { width: 9px; height: 9px; border-radius: 2px; }
+
+  /* table */
+  .section-head { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; }
+  .section-head h2 { font-size: 15px; margin: 0; font-weight: 600; }
+  .section-head .count { color: var(--muted); font-size: 13px; }
+  .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 10px 14px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--panel2); }
+  th:hover { color: var(--text); }
+  th .arrow { opacity: .5; font-size: 10px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .task-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--panel2); border: 1px solid var(--border); color: var(--muted); }
+  .reason-cleared { color: var(--amber); } .reason-session_end { color: var(--green); } .reason-live { color: var(--blue); }
+  .empty { text-align: center; color: var(--muted); padding: 40px; }
+
+  /* settings modal (shared) */
+  .settings-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+  .settings-overlay.open { display: flex; }
+  .settings-modal { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; width: min(460px, 92vw); box-shadow: 0 24px 70px rgba(0,0,0,.6); overflow: hidden; }
+  .settings-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .settings-head h2 { font-size: 15px; margin: 0; letter-spacing: .5px; font-weight: 600; }
+  .settings-close { background: none; border: none; color: var(--muted); font-size: 24px; cursor: pointer; line-height: 1; }
+  .settings-close:hover { color: var(--text); }
+  .settings-body { padding: 6px 20px 18px; }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 14px; font-weight: 600; }
+  .setting-desc { font-size: 12px; color: var(--muted); margin-top: 4px; max-width: 280px; line-height: 1.45; }
+  .setting-status { font-size: 12px; margin-top: 5px; min-height: 15px; color: var(--muted); }
+  .setting-status.ok { color: var(--green); } .setting-status.err { color: var(--red); }
+  .switch { position: relative; width: 48px; height: 27px; flex: 0 0 auto; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; cursor: pointer; background: var(--panel2); border: 1px solid var(--border); border-radius: 27px; transition: .2s; }
+  .slider:before { content: ""; position: absolute; height: 19px; width: 19px; left: 3px; top: 3px; background: var(--muted); border-radius: 50%; transition: .2s; }
+  .switch input:checked + .slider { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked + .slider:before { transform: translateX(21px); background: #fff; }
+  .switch input:disabled + .slider { opacity: .5; cursor: not-allowed; }
+  .settings-foot { padding: 11px 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--gray); text-align: center; }
+</style>
+</head>
+<body>
+  <header>
+    <h1><span class="dot">●</span> AI HQ · History</h1>
+    <div class="spacer"></div>
+    <button class="toplink" id="refreshBtn" onclick="loadAll()" title="Reload history">↻ Refresh</button>
+    <a class="toplink" href="/">🏢 Office</a>
+    <a class="toplink" href="/dashboard">📊 Control Panel</a>
+    <a class="toplink active" href="/history">📈 History</a>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
+  </header>
+
+  <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-modal" role="dialog" aria-modal="true" aria-label="Settings">
+      <div class="settings-head"><h2>⚙ Settings</h2><button class="settings-close" onclick="closeSettings()" aria-label="Close">&times;</button></div>
+      <div class="settings-body">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Start with Windows</div>
+            <div class="setting-desc">Launch AI HQ automatically (hidden) when you log in to Windows.</div>
+            <div class="setting-status" id="autostartStatus"></div>
+          </div>
+          <label class="switch"><input type="checkbox" id="autostartToggle" onchange="toggleAutostart(this)"><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Install as app</div>
+            <div class="setting-desc">Install the control panel as a desktop app for a dedicated window.</div>
+            <div class="setting-status" id="installStatus"></div>
+          </div>
+          <button class="toplink" id="installBtn" onclick="installApp()" disabled>Install</button>
+        </div>
+      </div>
+      <div class="settings-foot">AI HQ · Claude Code Control Panel</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="tiles" id="tiles"></div>
+
+    <div class="charts" id="charts"></div>
+
+    <div class="section-head">
+      <h2>Sessions</h2>
+      <span class="count" id="sessCount"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="sessTable">
+        <thead><tr id="sessHead"></tr></thead>
+        <tbody id="sessBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="chart-tooltip" id="chartTip"></div>
+
+<script>
+  // ---------- formatting helpers ----------
+  function fmt(n) {
+    n = +n || 0;
+    if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n/1e3).toFixed(1) + 'k';
+    return String(Math.round(n));
+  }
+  function money(n) { n = +n || 0; if (n < 0.01 && n > 0) return '$' + n.toFixed(4); return '$' + n.toFixed(2); }
+  function dur(ms) {
+    ms = +ms || 0; const m = Math.floor(ms / 60000); const h = Math.floor(m / 60);
+    if (h > 0) return h + 'h ' + (m % 60) + 'm'; return m + 'm';
+  }
+  function timeLabel(iso) {
+    try { return new Date(iso).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch { return iso || ''; }
+  }
+  function shortModel(m) { if (!m) return '—'; return String(m).replace(/^claude-/, '').replace(/-\d{6,}.*$/, '').replace(/-\d+$/, ''); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  // ---------- SVG line chart with hover ----------
+  const VBW = 1000, VBH = 260, PADL = 64, PADR = 18, PADT = 16, PADB = 30;
+  const INW = VBW - PADL - PADR, INH = VBH - PADT - PADB;
+  const tip = document.getElementById('chartTip');
+
+  function sampleIdx(len, max) {
+    if (len <= max) return Array.from({ length: len }, (_, i) => i);
+    const idx = []; const step = (len - 1) / (max - 1);
+    for (let i = 0; i < max; i++) idx.push(Math.round(i * step));
+    return idx;
+  }
+
+  function makeChart(parent, { title, times, series, yFormat }) {
+    const n = times.length;
+    const yMaxRaw = Math.max(...series.flatMap((s) => s.data), 0);
+    const yMax = yMaxRaw <= 0 ? 1 : yMaxRaw * 1.1;
+    const X = (i) => PADL + (n <= 1 ? INW / 2 : (i / (n - 1)) * INW);
+    const Y = (v) => PADT + INH - (v / yMax) * INH;
+
+    // gridlines + y labels
+    let grid = '';
+    for (let k = 0; k <= 4; k++) {
+      const gy = PADT + (k / 4) * INH; const val = yMax * (1 - k / 4);
+      grid += `<line class="grid-line" x1="${PADL}" y1="${gy}" x2="${VBW - PADR}" y2="${gy}"/>`;
+      grid += `<text class="axis-label" x="${PADL - 8}" y="${gy + 4}" text-anchor="end">${esc(yFormat(val))}</text>`;
+    }
+    // x labels (~5)
+    let xlab = '';
+    const nx = Math.min(5, n);
+    for (let k = 0; k < nx; k++) {
+      const i = nx <= 1 ? 0 : Math.round((k / (nx - 1)) * (n - 1));
+      const anchor = k === 0 ? 'start' : k === nx - 1 ? 'end' : 'middle';
+      xlab += `<text class="axis-label" x="${X(i)}" y="${VBH - 10}" text-anchor="${anchor}">${esc(timeLabel(times[i]))}</text>`;
+    }
+    // polylines
+    let lines = '';
+    for (const s of series) {
+      const pts = s.data.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+      lines += `<polyline class="plot-line" stroke="${s.color}" points="${pts}"/>`;
+    }
+    const legend = series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('');
+
+    const card = document.createElement('div');
+    card.className = 'chart-card';
+    card.innerHTML = `
+      <div class="chart-head"><h3>${esc(title)}</h3><div class="legend">${legend}</div></div>
+      <div class="chart-body">
+        <svg viewBox="0 0 ${VBW} ${VBH}" preserveAspectRatio="none">
+          ${grid}${xlab}${lines}
+          <line class="hover-line" x1="0" y1="${PADT}" x2="0" y2="${PADT + INH}"></line>
+          <rect x="${PADL}" y="${PADT}" width="${INW}" height="${INH}" fill="transparent"></rect>
+        </svg>
+      </div>`;
+    parent.appendChild(card);
+
+    // hover interaction
+    const svg = card.querySelector('svg');
+    const hover = card.querySelector('.hover-line');
+    const body = card.querySelector('.chart-body');
+    body.addEventListener('mousemove', (e) => {
+      const r = svg.getBoundingClientRect();
+      const frac = (e.clientX - r.left - (PADL / VBW) * r.width) / ((INW / VBW) * r.width);
+      let i = Math.round(frac * (n - 1));
+      i = Math.max(0, Math.min(n - 1, i));
+      const vbx = X(i);
+      hover.setAttribute('x1', vbx); hover.setAttribute('x2', vbx); hover.style.opacity = 1;
+      let rows = series.map((s) => `<div class="tt-row"><i style="background:${s.color}"></i>${esc(s.name)}: <b>${esc(yFormat(s.data[i]))}</b></div>`).join('');
+      tip.innerHTML = `<div class="tt-time">${esc(timeLabel(times[i]))}</div>${rows}`;
+      tip.style.opacity = 1;
+      let tx = e.clientX + 14, ty = e.clientY + 14;
+      if (tx + tip.offsetWidth > window.innerWidth) tx = e.clientX - tip.offsetWidth - 14;
+      tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
+    });
+    body.addEventListener('mouseleave', () => { hover.style.opacity = 0; tip.style.opacity = 0; });
+  }
+
+  // ---------- data loading ----------
+  async function loadTrends() {
+    const box = document.getElementById('charts');
+    box.innerHTML = '';
+    let csv;
+    try { csv = await fetch('/history.csv').then((r) => r.text()); } catch { box.innerHTML = '<div class="empty">Could not load trend data.</div>'; return; }
+    const rows = csv.trim().split('\n').slice(1).map((l) => l.split(','));
+    if (!rows.length || !rows[0][0]) { box.innerHTML = '<div class="empty">No trend data yet — it accrues while sessions run.</div>'; return; }
+    const idx = sampleIdx(rows.length, 200);
+    const pick = (col, num) => idx.map((i) => (num ? +rows[i][col] : rows[i][col]));
+    const times = pick(0, false);
+    makeChart(box, { title: 'Tokens over time', times, yFormat: fmt, series: [ { name: 'Tokens', color: '#5b8cff', data: pick(4, true) } ] });
+    makeChart(box, { title: 'Cost over time', times, yFormat: money, series: [ { name: 'API cost', color: '#4aa8ff', data: pick(5, true) }, { name: 'Labor value', color: '#35d07f', data: pick(6, true) } ] });
+    makeChart(box, { title: 'Sessions over time', times, yFormat: (v) => String(Math.round(v)), series: [ { name: 'Total', color: '#b47bff', data: pick(1, true) }, { name: 'Active', color: '#f5b53d', data: pick(2, true) }, { name: 'Waiting', color: '#ff5c6c', data: pick(3, true) } ] });
+  }
+
+  let sessData = [];
+  let sortKey = 'archivedAt', sortDir = -1;
+  const COLS = [
+    { key: 'name', label: 'Session', get: (s) => s.name, cell: (s) => esc(s.name || '—') },
+    { key: 'task', label: 'Task', get: (s) => s.task || '', cell: (s) => `<span class="task-cell" title="${esc(s.task || '')}">${esc(s.task || '—')}</span>` },
+    { key: 'model', label: 'Model', get: (s) => s.model || '', cell: (s) => `<span class="pill">${esc(shortModel(s.model))}</span>` },
+    { key: 'ide', label: 'IDE', get: (s) => s.ide || '', cell: (s) => esc(s.ide || '—') },
+    { key: 'source', label: 'Source', get: (s) => s.source || 'code', cell: (s) => `<span class="pill">${s.source === 'cowork' ? '🤝 cowork' : '⌨️ code'}</span>` },
+    { key: 'role', label: 'Role', get: (s) => s.role || '', cell: (s) => esc(s.role || '—') },
+    { key: 'activeMs', label: 'Active', num: true, get: (s) => +s.activeMs || 0, cell: (s) => dur(s.activeMs) },
+    { key: 'tokens', label: 'Tokens', num: true, get: (s) => (s.tokens && s.tokens.total) || 0, cell: (s) => fmt((s.tokens && s.tokens.total) || 0) },
+    { key: 'cost', label: 'API $', num: true, get: (s) => +s.cost || 0, cell: (s) => money(s.cost) },
+    { key: 'labor', label: 'Labor $', num: true, get: (s) => (s.labor && s.labor.cost) || 0, cell: (s) => money((s.labor && s.labor.cost) || 0) },
+    { key: 'archivedAt', label: 'Last activity', get: (s) => new Date(s.archivedAt || 0).getTime(), cell: (s) => timeLabel(s.endTime || s.archivedAt) },
+    { key: 'endReason', label: 'Status', get: (s) => (s.live ? 'live' : s.endReason) || '', cell: (s) => s.live ? `<span class="reason-live">● ${esc(s.state || 'live')}</span>` : `<span class="reason-${esc(s.endReason)}">${esc((s.endReason || '').replace('_', ' '))}</span>` },
+  ];
+
+  function renderTable() {
+    const head = document.getElementById('sessHead');
+    head.innerHTML = COLS.map((c) => {
+      const arrow = c.key === sortKey ? (sortDir < 0 ? ' ▼' : ' ▲') : '';
+      return `<th data-key="${c.key}" class="${c.num ? 'num' : ''}">${esc(c.label)}<span class="arrow">${arrow}</span></th>`;
+    }).join('');
+    head.querySelectorAll('th').forEach((th) => th.addEventListener('click', () => {
+      const k = th.dataset.key;
+      if (k === sortKey) sortDir *= -1; else { sortKey = k; sortDir = -1; }
+      renderTable();
+    }));
+
+    const col = COLS.find((c) => c.key === sortKey);
+    const sorted = [...sessData].sort((a, b) => {
+      const va = col.get(a), vb = col.get(b);
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * sortDir;
+      return String(va).localeCompare(String(vb)) * sortDir;
+    });
+
+    const body = document.getElementById('sessBody');
+    if (!sorted.length) { body.innerHTML = `<tr><td colspan="${COLS.length}"><div class="empty">No sessions tracked yet. Start a Claude Code session and it will appear here.</div></td></tr>`; return; }
+    body.innerHTML = sorted.map((s) => '<tr>' + COLS.map((c) => `<td class="${c.num ? 'num' : ''}">${c.cell(s)}</td>`).join('') + '</tr>').join('');
+  }
+
+  function renderTiles() {
+    const t = document.getElementById('tiles');
+    const totalTokens = sessData.reduce((a, s) => a + ((s.tokens && s.tokens.total) || 0), 0);
+    const totalCost = sessData.reduce((a, s) => a + (+s.cost || 0), 0);
+    const totalLabor = sessData.reduce((a, s) => a + ((s.labor && s.labor.cost) || 0), 0);
+    const totalActive = sessData.reduce((a, s) => a + (+s.activeMs || 0), 0);
+    t.innerHTML = `
+      <div class="tile"><div class="v">${sessData.length}</div><div class="l">Sessions tracked</div></div>
+      <div class="tile blue"><div class="v">${fmt(totalTokens)}</div><div class="l">Total tokens</div></div>
+      <div class="tile"><div class="v">${money(totalCost)}</div><div class="l">Total API cost</div></div>
+      <div class="tile green"><div class="v">${money(totalLabor)}</div><div class="l">Total labor value</div></div>
+      <div class="tile amber"><div class="v">${dur(totalActive)}</div><div class="l">Total active time</div></div>`;
+  }
+
+  async function loadSessions() {
+    try { sessData = await fetch('/history/sessions').then((r) => r.json()); }
+    catch { sessData = []; }
+    if (!Array.isArray(sessData)) sessData = [];
+    document.getElementById('sessCount').textContent = sessData.length ? `${sessData.length} session${sessData.length === 1 ? '' : 's'}` : '';
+    renderTiles();
+    renderTable();
+  }
+
+  async function loadAll() {
+    const btn = document.getElementById('refreshBtn');
+    btn.textContent = '↻ …';
+    await Promise.all([loadTrends(), loadSessions()]);
+    btn.textContent = '↻ Refresh';
+  }
+  loadAll();
+  setInterval(loadAll, 60000);
+
+  // ---------- PWA + settings (shared) ----------
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  let deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; const b = document.getElementById('installBtn'); if (b) b.disabled = false; });
+  window.addEventListener('appinstalled', () => { deferredInstall = null; setInstallStatus('Installed', 'ok'); const b = document.getElementById('installBtn'); if (b) { b.disabled = true; b.textContent = 'Installed'; } });
+  function setInstallStatus(msg, cls) { const el = document.getElementById('installStatus'); if (el) { el.textContent = msg; el.className = 'setting-status ' + (cls || ''); } }
+  async function installApp() {
+    if (!deferredInstall) {
+      if (window.matchMedia('(display-mode: standalone)').matches) return setInstallStatus('Already running as an app.', 'ok');
+      return setInstallStatus('Use your browser menu → "Install app".', '');
+    }
+    deferredInstall.prompt();
+    const { outcome } = await deferredInstall.userChoice;
+    setInstallStatus(outcome === 'accepted' ? 'Installing…' : 'Install dismissed.', outcome === 'accepted' ? 'ok' : '');
+    deferredInstall = null;
+  }
+  function openSettings() {
+    document.getElementById('settingsOverlay').classList.add('open');
+    refreshAutostart();
+    if (window.matchMedia('(display-mode: standalone)').matches) { const b = document.getElementById('installBtn'); if (b) { b.disabled = true; b.textContent = 'Installed'; } setInstallStatus('Running as an installed app.', 'ok'); }
+  }
+  function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSettings(); });
+  function setAutostartStatus(msg, cls) { const el = document.getElementById('autostartStatus'); if (el) { el.textContent = msg || ''; el.className = 'setting-status ' + (cls || ''); } }
+  async function refreshAutostart() {
+    const toggle = document.getElementById('autostartToggle');
+    setAutostartStatus('Checking…', '');
+    try {
+      const r = await fetch('/autostart').then((x) => x.json());
+      if (!r.supported) { toggle.checked = false; toggle.disabled = true; setAutostartStatus('Windows only.', ''); return; }
+      toggle.disabled = false; toggle.checked = !!r.enabled;
+      setAutostartStatus(r.enabled ? 'Enabled — launches on login.' : 'Disabled.', r.enabled ? 'ok' : '');
+    } catch { toggle.disabled = true; setAutostartStatus('Server unreachable.', 'err'); }
+  }
+  async function toggleAutostart(input) {
+    const enabled = input.checked; input.disabled = true;
+    setAutostartStatus(enabled ? 'Enabling…' : 'Disabling…', '');
+    try {
+      const r = await fetch('/autostart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) }).then((x) => x.json());
+      input.checked = !!r.enabled;
+      if (r.ok) setAutostartStatus(r.enabled ? 'Enabled — launches on login.' : 'Disabled.', r.enabled ? 'ok' : '');
+      else setAutostartStatus('Failed: ' + (r.error || r.reason || 'unknown'), 'err');
+    } catch { input.checked = !enabled; setAutostartStatus('Request failed.', 'err'); }
+    finally { input.disabled = false; }
+  }
+</script>
+</body>
+</html>

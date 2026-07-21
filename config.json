@@ -1,0 +1,6 @@
+{
+  "port": 3456,
+  "autoStart": true,
+  "staleMinutes": 15,
+  "abandonMinutes": 45
+}

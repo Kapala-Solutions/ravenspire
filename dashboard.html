@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI HQ — Control Panel</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b0e14">
+<meta name="application-name" content="AI HQ">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AI HQ">
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #141925;
+    --panel2: #1b2130;
+    --border: #262d3d;
+    --text: #e6ebf5;
+    --muted: #8a94a8;
+    --accent: #5b8cff;
+    --green: #35d07f;
+    --amber: #f5b53d;
+    --blue: #4aa8ff;
+    --gray: #6b7488;
+    --red: #ff5c6c;
+    --purple: #b47bff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex; align-items: center; gap: 20px;
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #10141d, #0b0e14);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .3px; font-weight: 600; }
+  header h1 .dot { color: var(--accent); }
+  .stats { display: flex; gap: 22px; margin-left: auto; }
+  .stat { text-align: right; }
+  .stat .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .toplink {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
+  }
+  .toplink:hover { color: var(--text); border-color: var(--accent); }
+  .icon-btn {
+    background: var(--panel2); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 8px;
+    width: 34px; height: 34px; font-size: 17px; line-height: 1;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,0.14); transform: rotate(30deg); }
+  .settings-overlay {
+    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px);
+  }
+  .settings-overlay.open { display: flex; }
+  .settings-modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    width: min(460px, 92vw); box-shadow: 0 24px 70px rgba(0,0,0,.6); overflow: hidden;
+  }
+  .settings-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+  }
+  .settings-head h2 { font-size: 15px; margin: 0; letter-spacing: .5px; font-weight: 600; }
+  .settings-close { background: none; border: none; color: var(--muted); font-size: 24px; cursor: pointer; line-height: 1; }
+  .settings-close:hover { color: var(--text); }
+  .settings-body { padding: 6px 20px 18px; }
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 16px 0; border-bottom: 1px solid var(--border);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 14px; font-weight: 600; }
+  .setting-desc { font-size: 12px; color: var(--muted); margin-top: 4px; max-width: 280px; line-height: 1.45; }
+  .setting-status { font-size: 12px; margin-top: 5px; min-height: 15px; color: var(--muted); }
+  .setting-status.ok { color: var(--green); }
+  .setting-status.err { color: var(--red); }
+  .switch { position: relative; width: 48px; height: 27px; flex: 0 0 auto; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; cursor: pointer; background: var(--panel2); border: 1px solid var(--border); border-radius: 27px; transition: .2s; }
+  .slider:before { content: ""; position: absolute; height: 19px; width: 19px; left: 3px; top: 3px; background: var(--muted); border-radius: 50%; transition: .2s; }
+  .switch input:checked + .slider { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked + .slider:before { transform: translateX(21px); background: #fff; }
+  .switch input:disabled + .slider { opacity: .5; cursor: not-allowed; }
+  .settings-foot { padding: 11px 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--gray); text-align: center; }
+
+  .alertbar {
+    margin: 16px 24px 0; padding: 14px 18px; border-radius: 12px;
+    background: linear-gradient(90deg, rgba(245,181,61,.18), rgba(255,92,108,.14));
+    border: 1px solid var(--amber); color: var(--text);
+    font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 12px;
+    animation: alertpulse 1.6s ease-in-out infinite;
+  }
+  @keyframes alertpulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(245,181,61,.0); border-color: var(--amber); }
+    50% { box-shadow: 0 0 22px 0 rgba(245,181,61,.35); border-color: #ffd479; }
+  }
+  .alertbar .bell { font-size: 20px; animation: shake 1.6s infinite; }
+  @keyframes shake {
+    0%,100% { transform: rotate(0); } 10% { transform: rotate(18deg); }
+    20% { transform: rotate(-14deg); } 30% { transform: rotate(10deg); } 40% { transform: rotate(0); }
+  }
+  .alertbar .who { color: var(--muted); font-weight: 500; }
+
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px; padding: 24px;
+  }
+  .card.attention {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 1px var(--amber), 0 0 20px rgba(245,181,61,.25);
+    animation: alertpulse 1.8s ease-in-out infinite;
+  }
+  .card.attention::before { background: var(--amber); }
+  .waitbadge {
+    font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 700;
+    background: rgba(245,181,61,.18); border: 1px solid var(--amber); color: var(--amber);
+  }
+  .card { cursor: pointer; }
+  .focusbtn {
+    background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+    width: 26px; height: 26px; border-radius: 7px; font-size: 14px; cursor: pointer;
+    flex-shrink: 0; align-self: flex-start; line-height: 1;
+  }
+  .focusbtn:hover { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,.15); }
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: #0f131c; border: 1px solid var(--border); color: var(--text);
+    padding: 10px 16px; border-radius: 10px; font-size: 13px; z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5); opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  .toast.err { border-color: var(--red); color: #ffc7cd; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    position: relative; overflow: visible;
+  }
+  .card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--st, var(--gray)); border-radius: 14px 0 0 14px;
+  }
+  .card.working { --st: var(--green); }
+  .card.thinking { --st: var(--amber); }
+  .card.idle { --st: var(--gray); }
+  .card.starting { --st: var(--blue); }
+  .card.ended { --st: var(--red); opacity: .6; }
+
+  .row { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; color: #0b0e14;
+  }
+  .idblock { flex: 1; min-width: 0; }
+  .name { font-weight: 700; font-size: 15px; cursor: pointer;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name:hover { color: var(--accent); }
+  .activity {
+    font-size: 12.5px; color: var(--text); opacity: .85; margin-top: 1px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .state {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px;
+    color: var(--muted); text-transform: capitalize; flex-shrink: 0; align-self: flex-start;
+  }
+  .state .pulse {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--st, var(--gray));
+    box-shadow: 0 0 0 0 var(--st);
+  }
+  .card.working .pulse { animation: pulse 1.4s infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(53,208,127,.5); }
+    70% { box-shadow: 0 0 0 8px rgba(53,208,127,0); }
+    100% { box-shadow: 0 0 0 0 rgba(53,208,127,0); }
+  }
+
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600;
+    background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge.model { color: var(--purple); border-color: #3a2d52; background: #1d1730; }
+  .badge.ide { color: var(--blue); }
+  .badge.tool { color: var(--green); border-color: #1e3a2b; background: #10231a; }
+  .badge.source-cowork { color: var(--amber); border-color: #4a3a1e; background: #241b0f; }
+  .badge.source-code { color: var(--gray); }
+
+  /* team (grouped) cards */
+  .toplink.active { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,0.12); }
+  .team-card { grid-column: 1 / -1; background: linear-gradient(180deg,#161b28,#111621); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .team-card.attention { border-color: var(--amber); }
+  .team-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; cursor: pointer; }
+  .team-head:hover { background: rgba(255,255,255,0.02); }
+  .team-avatars { display: flex; flex: 0 0 auto; }
+  .team-avatars .avatar, .team-avatars .more { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; border: 2px solid #12151d; margin-left: -10px; }
+  .team-avatars .avatar:first-child { margin-left: 0; }
+  .team-avatars .avatar { color: #fff; }
+  .team-avatars .more { background: var(--panel2); color: var(--muted); font-size: 12px; }
+  .team-info { flex: 1; min-width: 0; }
+  .team-name { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .team-sub { color: var(--muted); font-size: 12px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team-metrics { display: flex; gap: 18px; text-align: right; flex: 0 0 auto; }
+  .team-metrics .tv { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
+  .team-metrics .tl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+  .team-chev { color: var(--muted); transition: transform .2s; font-size: 13px; flex: 0 0 auto; }
+  .team-card.open .team-chev { transform: rotate(90deg); }
+  .team-members { display: none; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap: 14px; padding: 0 16px 16px; }
+  .team-card.open .team-members { display: grid; }
+  .team-badge { font-size: 11px; padding: 2px 9px; border-radius: 20px; background: var(--panel2); border: 1px solid var(--border); color: var(--muted); font-weight: 600; }
+  .team-badge.working { color: var(--green); border-color: #1e3a2b; background: #10231a; }
+  .team-badge.attn { color: var(--amber); border-color: #4a3a1e; background: #241b0f; }
+  @media (max-width: 720px) { .team-metrics { display: none; } }
+
+  .metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 12px; margin-top: 2px; }
+  .metric { position: relative; }
+  .metric .mv { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .metric .mv.labor { color: var(--green); }
+  .metric .ml { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .metric .ml .info {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--muted);
+    font-size: 9px; margin-left: 4px; cursor: help; color: var(--muted); text-transform: none;
+  }
+  .metric .ml .info:hover { color: var(--text); border-color: var(--accent); }
+  .tipbox {
+    display: none; position: absolute; z-index: 50; left: 0; top: 100%; margin-top: 6px;
+    width: 250px; background: #0f131c; border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.5); text-transform: none;
+  }
+  .metric:hover .tipbox { display: block; }
+  .tipbox h4 { margin: 0 0 6px; font-size: 11px; color: var(--text); font-weight: 700; }
+  .tipbox table { width: 100%; border-collapse: collapse; font-size: 11px; color: var(--muted); }
+  .tipbox td { padding: 2px 0; }
+  .tipbox td:last-child { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  .tipbox .trow-total td { border-top: 1px solid var(--border); padding-top: 4px; font-weight: 700; color: var(--text); }
+  .tipbox .note { margin-top: 6px; font-size: 10px; color: var(--muted); line-height: 1.35; }
+  .rolesel {
+    font-size: 11px; padding: 3px 6px; border-radius: 6px; font-weight: 600;
+    background: var(--panel2); border: 1px solid var(--border); color: var(--amber); cursor: pointer;
+  }
+
+  .tokbar { height: 6px; border-radius: 4px; background: var(--panel2); overflow: hidden; display: flex; }
+  .tokbar i { height: 100%; display: block; }
+  .tokbar .in { background: var(--blue); }
+  .tokbar .out { background: var(--green); }
+  .tokbar .cache { background: var(--gray); }
+  .tokleg { display: flex; gap: 12px; font-size: 10.5px; color: var(--muted); }
+  .tokleg span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .tokleg .i::before { background: var(--blue); }
+  .tokleg .o::before { background: var(--green); }
+  .tokleg .c::before { background: var(--gray); }
+
+  .task { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .path { font-size: 11px; color: var(--muted); opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty { color: var(--muted); text-align: center; padding: 80px 20px; }
+  .empty h2 { color: var(--text); font-weight: 600; }
+  code { background: var(--panel2); padding: 2px 6px; border-radius: 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1><span class="dot">●</span> AI HQ · Control Panel</h1>
+    <div class="stats">
+      <div class="stat"><div class="v" id="s-sessions">0</div><div class="l">Sessions</div></div>
+      <div class="stat"><div class="v" id="s-active">0</div><div class="l">Active</div></div>
+      <div class="stat"><div class="v" id="s-tokens">0</div><div class="l">Tokens</div></div>
+      <div class="stat"><div class="v" id="s-cost">$0</div><div class="l">API Cost</div></div>
+      <div class="stat"><div class="v" id="s-labor" style="color:var(--green)">$0</div><div class="l">Labor Value</div></div>
+    </div>
+    <button class="toplink" id="groupBtn" title="Group sessions by project/workspace">🧩 Group</button>
+    <button class="toplink" id="muteBtn" title="Toggle alert sound">🔔</button>
+    <a class="toplink" href="/">🏢 Office view</a>
+    <a class="toplink" href="/history">📈 History</a>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
+  </header>
+
+  <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-modal" role="dialog" aria-modal="true" aria-label="Settings">
+      <div class="settings-head">
+        <h2>⚙ Settings</h2>
+        <button class="settings-close" onclick="closeSettings()" aria-label="Close">&times;</button>
+      </div>
+      <div class="settings-body">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Start with Windows</div>
+            <div class="setting-desc">Launch AI HQ automatically (hidden) when you log in to Windows.</div>
+            <div class="setting-status" id="autostartStatus"></div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="autostartToggle" onchange="toggleAutostart(this)">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Install as app</div>
+            <div class="setting-desc">Install the control panel as a desktop app for a dedicated window.</div>
+            <div class="setting-status" id="installStatus"></div>
+          </div>
+          <button class="toplink" id="installBtn" onclick="installApp()" disabled>Install</button>
+        </div>
+      </div>
+      <div class="settings-foot">AI HQ · Claude Code Control Panel</div>
+    </div>
+  </div>
+
+  <div id="alertbar" class="alertbar" style="display:none"></div>
+
+  <div id="grid" class="grid"></div>
+  <div id="toast" class="toast"></div>
+  <div id="empty" class="empty" style="display:none">
+    <h2>No sessions yet</h2>
+    <p>Start a Claude Code session in any IDE — it will appear here automatically.</p>
+  </div>
+
+<script>
+  // ---- PWA: service worker + install prompt ----
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  }
+  let deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); deferredInstall = e;
+    const btn = document.getElementById('installBtn'); if (btn) btn.disabled = false;
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredInstall = null; setInstallStatus('Installed', 'ok');
+    const btn = document.getElementById('installBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Installed'; }
+  });
+  function setInstallStatus(msg, cls) {
+    const el = document.getElementById('installStatus');
+    if (el) { el.textContent = msg; el.className = 'setting-status ' + (cls || ''); }
+  }
+  async function installApp() {
+    if (!deferredInstall) {
+      if (window.matchMedia('(display-mode: standalone)').matches) return setInstallStatus('Already running as an app.', 'ok');
+      return setInstallStatus('Use your browser menu → "Install app".', '');
+    }
+    deferredInstall.prompt();
+    const { outcome } = await deferredInstall.userChoice;
+    setInstallStatus(outcome === 'accepted' ? 'Installing…' : 'Install dismissed.', outcome === 'accepted' ? 'ok' : '');
+    deferredInstall = null;
+  }
+
+  // ---- Settings modal + "Start with Windows" ----
+  function openSettings() {
+    document.getElementById('settingsOverlay').classList.add('open');
+    refreshAutostart();
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      const btn = document.getElementById('installBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Installed'; }
+      setInstallStatus('Running as an installed app.', 'ok');
+    }
+  }
+  function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSettings(); });
+  function setAutostartStatus(msg, cls) {
+    const el = document.getElementById('autostartStatus');
+    if (el) { el.textContent = msg || ''; el.className = 'setting-status ' + (cls || ''); }
+  }
+  async function refreshAutostart() {
+    const toggle = document.getElementById('autostartToggle');
+    setAutostartStatus('Checking…', '');
+    try {
+      const r = await fetch('/autostart').then((x) => x.json());
+      if (!r.supported) { toggle.checked = false; toggle.disabled = true; setAutostartStatus('Windows only.', ''); return; }
+      toggle.disabled = false; toggle.checked = !!r.enabled;
+      setAutostartStatus(r.enabled ? 'Enabled — launches on login.' : 'Disabled.', r.enabled ? 'ok' : '');
+    } catch {
+      toggle.disabled = true; setAutostartStatus('Server unreachable.', 'err');
+    }
+  }
+  async function toggleAutostart(input) {
+    const enabled = input.checked; input.disabled = true;
+    setAutostartStatus(enabled ? 'Enabling…' : 'Disabling…', '');
+    try {
+      const r = await fetch('/autostart', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      }).then((x) => x.json());
+      input.checked = !!r.enabled;
+      if (r.ok) setAutostartStatus(r.enabled ? 'Enabled — launches on login.' : 'Disabled.', r.enabled ? 'ok' : '');
+      else setAutostartStatus('Failed: ' + (r.error || r.reason || 'unknown'), 'err');
+    } catch {
+      input.checked = !enabled; setAutostartStatus('Request failed.', 'err');
+    } finally { input.disabled = false; }
+  }
+
+  let sessions = [];
+  let roleList = ['Software Engineer'];
+  fetch('/roles').then(r => r.json()).then(d => { if (d.roles) roleList = d.roles; }).catch(()=>{});
+
+  function fmt(n) {
+    if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n/1e3).toFixed(1) + 'k';
+    return String(n || 0);
+  }
+  function money(n) {
+    if (!n) return '$0';
+    if (n < 0.01) return '$' + n.toFixed(4);
+    return '$' + n.toFixed(2);
+  }
+  function shortModel(m) {
+    if (!m) return 'unknown';
+    return m.replace('claude-', '').replace(/-\d{8}$/, '');
+  }
+  function ideIcon(ide) {
+    const map = { vscode: '🆚 VS Code', cli: '⌨️ CLI', desktop: '🖥️ Desktop', sdk: '🧩 SDK' };
+    return map[ide] || ('💻 ' + ide);
+  }
+  function uptime(startISO) {
+    if (!startISO) return '—';
+    let s = Math.max(0, Math.floor((Date.now() - new Date(startISO).getTime()) / 1000));
+    const h = Math.floor(s/3600); s -= h*3600;
+    const m = Math.floor(s/60); s -= m*60;
+    if (h) return `${h}h ${m}m`;
+    if (m) return `${m}m ${s}s`;
+    return `${s}s`;
+  }
+
+  function render() {
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    empty.style.display = sessions.length ? 'none' : 'block';
+
+    let totTok = 0, totCost = 0, totLabor = 0, active = 0;
+    for (const s of sessions) {
+      totTok += (s.tokens && s.tokens.total) || 0;
+      totCost += s.cost || 0;
+      totLabor += (s.labor && s.labor.cost) || 0;
+      if (s.state === 'working' || s.state === 'thinking' || s.state === 'starting') active++;
+    }
+    document.getElementById('s-sessions').textContent = sessions.length;
+    document.getElementById('s-active').textContent = active;
+    document.getElementById('s-tokens').textContent = fmt(totTok);
+    document.getElementById('s-cost').textContent = money(totCost);
+    document.getElementById('s-labor').textContent = money(totLabor);
+
+    updateAlerts(sessions.filter(s => s.needsAttention));
+
+    // sort: active first, then most recent activity
+    const order = { working:0, starting:1, thinking:1, idle:2, ended:3 };
+    const prio = (s) => order[s.state] ?? 2;
+    const sorted = [...sessions].sort((a,b) =>
+      prio(a) - prio(b) || new Date(b.lastActivity) - new Date(a.lastActivity));
+
+    // Group sessions that belong to the same workspace (host+ide+cwd). Several
+    // Claude Code sessions spawned by one IDE window show up as separate cards;
+    // collapse them into one expandable "team" card. Toggle with the Group button.
+    const groupOn = localStorage.getItem('aihq-group') !== '0';
+    let items;
+    if (groupOn) {
+      const map = new Map();
+      for (const s of sorted) {
+        const k = groupKey(s);
+        if (!map.has(k)) map.set(k, []);
+        map.get(k).push(s);
+      }
+      items = [...map.values()].map(members =>
+        members.length > 1 ? { type:'team', members } : { type:'single', s: members[0] });
+      // order: teams/singles with any active member first, then most recent activity
+      const itemPrio = (it) => it.type === 'single' ? prio(it.s) : Math.min(...it.members.map(prio));
+      const itemTime = (it) => it.type === 'single' ? new Date(it.s.lastActivity)
+        : Math.max(...it.members.map(m => new Date(m.lastActivity)));
+      items.sort((a,b) => itemPrio(a) - itemPrio(b) || itemTime(b) - itemTime(a));
+    } else {
+      items = sorted.map(s => ({ type:'single', s }));
+    }
+
+    grid.innerHTML = items.map(it => it.type === 'team' ? teamCardHTML(it.members) : cardHTML(it.s)).join('');
+
+    // expand/collapse team cards
+    grid.querySelectorAll('.team-head').forEach(h => {
+      h.onclick = (e) => { if (e.target.closest('.focusbtn')) return; h.parentElement.classList.toggle('open'); };
+    });
+
+    // wire rename
+    grid.querySelectorAll('.name').forEach(el => {
+      el.onclick = () => {
+        const id = el.dataset.id;
+        const cur = sessions.find(s => s.sessionId === id);
+        const name = prompt('Rename session:', cur ? cur.name : '');
+        if (name != null) {
+          fetch('/rename', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ sessionId: id, name }) });
+        }
+      };
+    });
+
+    // wire role dropdown
+    grid.querySelectorAll('.rolesel').forEach(el => {
+      el.onchange = () => {
+        fetch('/role', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ sessionId: el.dataset.id, role: el.value }) });
+      };
+      el.onclick = (e) => e.stopPropagation(); // don't trigger card focus
+    });
+
+    // wire focus: explicit button + clicking the card body
+    grid.querySelectorAll('.focusbtn').forEach(el => {
+      el.onclick = (e) => { e.stopPropagation(); focusSession(el.dataset.focus); };
+    });
+    grid.querySelectorAll('.card').forEach(card => {
+      card.onclick = (e) => {
+        if (e.target.closest('.name, .rolesel, .info, .tipbox, .focusbtn')) return;
+        const id = card.querySelector('.focusbtn');
+        if (id) focusSession(id.dataset.focus);
+      };
+    });
+  }
+
+  let toastTimer = null;
+  function toast(msg, isErr) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 2600);
+  }
+
+  function focusSession(id) {
+    const s = sessions.find(x => x.sessionId === id);
+    toast(`Focusing ${s ? s.name : 'session'}…`);
+    fetch('/focus', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ sessionId: id }) })
+      .then(r => r.json())
+      .then(d => { if (!d.ok) toast(`Couldn't focus: ${d.reason || d.result || 'unknown'}`, true); })
+      .catch(() => toast('Focus request failed', true));
+  }
+
+  // Workspace identity: same machine + IDE + folder => same "team".
+  function groupKey(s) {
+    return [s.host || '', s.ide || '', (s.cwd || '').toLowerCase()].join('|');
+  }
+
+  function teamCardHTML(members) {
+    const active = members.filter(m => ['working','thinking','starting'].includes(m.state)).length;
+    const attn = members.filter(m => m.needsAttention).length;
+    const tok = members.reduce((a,m) => a + ((m.tokens && m.tokens.total) || 0), 0);
+    const cost = members.reduce((a,m) => a + (m.cost || 0), 0);
+    const labor = members.reduce((a,m) => a + ((m.labor && m.labor.cost) || 0), 0);
+    const first = members[0];
+    const proj = (first.cwd || '').split(/[\\/]/).filter(Boolean).pop() || first.title || 'workspace';
+    const earliest = members.reduce((a,m) => (!a || new Date(m.startTime) < new Date(a)) ? m.startTime : a, null);
+    const avatars = members.slice(0,5).map(m => {
+      const p = m.persona || { color:'#5b8cff', initial:(m.name||'?')[0] };
+      return `<div class="avatar" style="background:${p.color}" title="${esc(m.name)}">${esc(p.initial)}</div>`;
+    }).join('');
+    const more = members.length > 5 ? `<div class="more">+${members.length-5}</div>` : '';
+    const stateBadge = active ? `<span class="team-badge working">▶ ${active} working</span>`
+      : attn ? `<span class="team-badge attn">⏳ ${attn} waiting</span>`
+      : `<span class="team-badge">idle</span>`;
+    return `
+      <div class="team-card ${attn ? 'attention' : ''}">
+        <div class="team-head">
+          <div class="team-avatars">${avatars}${more}</div>
+          <div class="team-info">
+            <div class="team-name">${esc(proj)} <span class="team-badge">${members.length} agents</span> ${stateBadge}</div>
+            <div class="team-sub">${ideIcon(first.ide)} · ${esc(first.cwd)}</div>
+          </div>
+          <div class="team-metrics">
+            <div><div class="tv">${fmt(tok)}</div><div class="tl">Tokens</div></div>
+            <div><div class="tv">${money(cost)}</div><div class="tl">API</div></div>
+            <div><div class="tv" style="color:var(--green)">${money(labor)}</div><div class="tl">Labor</div></div>
+            <div><div class="tv" data-uptime="${earliest}">${uptime(earliest)}</div><div class="tl">Uptime</div></div>
+          </div>
+          <span class="team-chev">▶</span>
+        </div>
+        <div class="team-members">${members.map(cardHTML).join('')}</div>
+      </div>`;
+  }
+
+  function cardHTML(s) {
+    const tok = s.tokens || {};
+    const total = tok.total || 1;
+    const inPct = (tok.input/total*100)||0;
+    const outPct = (tok.output/total*100)||0;
+    const cachePct = ((tok.cacheCreation+tok.cacheRead)/total*100)||0;
+    const p = s.persona || { name: s.name, color: '#5b8cff', initial: (s.name||'?')[0] };
+    const stateChip = s.needsAttention
+      ? `<div class="waitbadge">⏳ ${esc(s.attentionReason || 'Waiting for you')}</div>`
+      : `<div class="state"><span class="pulse"></span>${s.state}</div>`;
+    return `
+      <div class="card ${s.state} ${s.needsAttention ? 'attention' : ''}">
+        <div class="row">
+          <div class="avatar" style="background:${p.color}">${esc(p.initial)}</div>
+          <div class="idblock">
+            <div class="name" data-id="${s.sessionId}" title="click to rename">${esc(s.name || p.name)}</div>
+            <div class="activity">${esc(s.activity || 'Working')}</div>
+          </div>
+          <button class="focusbtn" data-focus="${s.sessionId}" title="${s.ide==='claude-desktop' ? 'Open this conversation in Claude Desktop' : (s.windowPid ? 'Bring window to front — ' + esc(s.windowName||'?') + (s.windowChain?' ('+esc(s.windowChain)+')':'') : 'Window not detected yet — interact with that session once')}">⤢</button>
+          ${stateChip}
+        </div>
+        <div class="badges">
+          <span class="badge model">🤖 ${esc(shortModel(s.model))}</span>
+          <span class="badge ide">${ideIcon(s.ide)}</span>
+          <span class="badge source-${s.source === 'cowork' ? 'cowork' : 'code'}">${s.source === 'cowork' ? '🤝 cowork' : '⌨️ code'}</span>
+          <span class="badge">📁 ${esc(s.title)}</span>
+          ${s.toolCount ? `<span class="badge tool">🔧 ${s.toolCount} tools</span>` : ''}
+          ${roleSelect(s)}
+        </div>
+        ${s.task ? `<div class="task" title="${esc(s.task)}">🎯 ${esc(s.task)}</div>` : ''}
+        <div class="metrics">
+          <div class="metric"><div class="mv" data-uptime="${s.startTime}">${uptime(s.startTime)}</div><div class="ml">Uptime</div></div>
+          <div class="metric"><div class="mv">${laborHrs(s)}</div><div class="ml">Labor hrs</div></div>
+          <div class="metric"><div class="mv">${fmt(tok.total)}</div><div class="ml">Tokens</div></div>
+          <div class="metric">
+            <div class="mv">${money(s.cost)}</div>
+            <div class="ml">API cost <span class="info">i</span></div>
+            ${costTip(s)}
+          </div>
+          <div class="metric">
+            <div class="mv labor">${money(s.labor ? s.labor.cost : 0)}</div>
+            <div class="ml">Labor value <span class="info">i</span></div>
+            ${laborTip(s)}
+          </div>
+          <div class="metric"><div class="mv">${s.messages||0}</div><div class="ml">Msgs</div></div>
+        </div>
+        <div class="tokbar">
+          <i class="in" style="width:${inPct}%"></i>
+          <i class="out" style="width:${outPct}%"></i>
+          <i class="cache" style="width:${cachePct}%"></i>
+        </div>
+        <div class="tokleg">
+          <span class="i">In ${fmt(tok.input)}</span>
+          <span class="o">Out ${fmt(tok.output)}</span>
+          <span class="c">Cache ${fmt((tok.cacheCreation||0)+(tok.cacheRead||0))}</span>
+        </div>
+        <div class="path" title="${esc(s.cwd)}">${esc(s.cwd)}</div>
+      </div>`;
+  }
+
+  // ---- Waiting-for-you alerts ----------------------------------------------
+  let muted = localStorage.getItem('aihq-muted') === '1';
+  let prevWaiting = new Set();
+
+  const muteBtn = document.getElementById('muteBtn');
+  function paintMute(){ muteBtn.textContent = muted ? '🔕' : '🔔'; }
+  muteBtn.onclick = () => { muted = !muted; localStorage.setItem('aihq-muted', muted?'1':'0'); paintMute(); };
+  paintMute();
+
+  const groupBtn = document.getElementById('groupBtn');
+  function paintGroup(){ groupBtn.classList.toggle('active', localStorage.getItem('aihq-group') !== '0'); }
+  groupBtn.onclick = () => {
+    localStorage.setItem('aihq-group', localStorage.getItem('aihq-group') === '0' ? '1' : '0');
+    paintGroup(); render();
+  };
+  paintGroup();
+
+  // request OS notification permission up front
+  if ('Notification' in window && Notification.permission === 'default') {
+    try { Notification.requestPermission(); } catch {}
+  }
+
+  function chime() {
+    if (muted) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      o.start(); o.stop(ctx.currentTime + 0.4);
+    } catch {}
+  }
+
+  function notify(s) {
+    if (muted) return;
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(`${s.name} needs you`, { body: `${s.attentionReason || 'Waiting'} · ${s.title}` }); } catch {}
+    }
+  }
+
+  function updateAlerts(waiting) {
+    const bar = document.getElementById('alertbar');
+    if (!waiting.length) {
+      bar.style.display = 'none';
+      prevWaiting = new Set();
+      document.title = 'AI HQ — Control Panel';
+      return;
+    }
+    const who = waiting.map(s => `${esc(s.name)} (${esc(s.attentionReason || 'waiting')})`).join(' · ');
+    bar.innerHTML = `<span class="bell">🔔</span> <span>${waiting.length} agent${waiting.length>1?'s':''} waiting for you</span> <span class="who">${who}</span>`;
+    bar.style.display = 'flex';
+    document.title = `(${waiting.length}) ⏳ AI HQ`;
+
+    // fire chime + OS notification only for NEW waiters
+    const now = new Set(waiting.map(s => s.sessionId));
+    const fresh = waiting.filter(s => !prevWaiting.has(s.sessionId));
+    if (fresh.length) { chime(); fresh.forEach(notify); }
+    prevWaiting = now;
+  }
+
+  function laborHrs(s) {
+    const h = s.labor ? s.labor.hours : 0;
+    if (h >= 1) return h.toFixed(1) + 'h';
+    return Math.round(h * 60) + 'm';
+  }
+
+  function roleSelect(s) {
+    const cur = (s.labor && s.labor.role) || s.role || '';
+    const opts = roleList.map(r =>
+      `<option value="${esc(r)}" ${r===cur?'selected':''}>${esc(r)}</option>`).join('');
+    return `<select class="rolesel" data-id="${s.sessionId}">${opts}</select>`;
+  }
+
+  function costTip(s) {
+    const b = s.costBreakdown;
+    if (!b) return '';
+    const rows = b.items.map(i =>
+      `<tr><td>${esc(i.label)} · ${fmt(i.tokens)} × $${i.rate}/M</td><td>${money(i.cost)}</td></tr>`).join('');
+    return `<div class="tipbox">
+      <h4>API cost · ${esc(shortModel(b.model))}</h4>
+      <table>${rows}<tr class="trow-total"><td>Total</td><td>${money(b.total)}</td></tr></table>
+      <div class="note">Summed from the session transcript. Rate = USD per 1M tokens for this model; cost = tokens ÷ 1,000,000 × rate, added across input, output, cache-write and cache-read.</div>
+    </div>`;
+  }
+
+  function laborTip(s) {
+    const l = s.labor; if (!l) return '';
+    return `<div class="tipbox">
+      <h4>Labor value · ${esc(l.role)}</h4>
+      <table>
+        <tr><td>Avg salary (US)</td><td>$${(l.annualSalary||0).toLocaleString()}/yr</td></tr>
+        <tr><td>Hourly rate (÷ 2080h)</td><td>$${l.hourlyRate}/h</td></tr>
+        <tr><td>Active work time</td><td>${l.hours.toFixed(2)}h</td></tr>
+        <tr class="trow-total"><td>Labor value</td><td>${money(l.cost)}</td></tr>
+      </table>
+      <div class="note">What this work would cost at a human's rate. Active time = tool activity (idle gaps over 5 min excluded). Salary from a built-in average table — change the role via the dropdown.</div>
+    </div>`;
+  }
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // Live uptime tick without full re-render
+  setInterval(() => {
+    document.querySelectorAll('[data-uptime]').forEach(el => {
+      el.textContent = uptime(el.dataset.uptime);
+    });
+  }, 1000);
+
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${proto}://${location.host}`);
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'sessions') { sessions = msg.sessions || []; render(); }
+    };
+    ws.onclose = () => setTimeout(connect, 1500);
+  }
+  // initial load + live updates
+  fetch('/sessions').then(r => r.json()).then(d => { sessions = d; render(); }).catch(()=>{});
+  connect();
+</script>
+</body>
+</html>
