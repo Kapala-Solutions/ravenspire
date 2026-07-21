@@ -1351,6 +1351,21 @@ const pixelOffice = (() => {
         ctx.fill();
         ctx.fillStyle = this.tagColor || '#fff';
         ctx.fillText(label, x, tagY + 1);
+
+        // "view in office" highlight — bouncing pin + pulsing ring for ~6s
+        if (this.highlight && Date.now() - this.highlight < 6000) {
+          const t = Date.now() - this.highlight;
+          const bounce = Math.abs(Math.sin(t / 220)) * 6;
+          ctx.save();
+          ctx.font = '15px monospace';
+          ctx.fillText('📍', x, tagY - 15 - bounce);
+          ctx.strokeStyle = this.tagColor || '#5b8cff';
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.35 + 0.4 * (0.5 + 0.5 * Math.sin(t / 160));
+          roundRectPath(x - w / 2 - 3, tagY - 13, w + 6, 21, 6);
+          ctx.stroke();
+          ctx.restore();
+        }
         ctx.textAlign = 'left';
       }
     }
@@ -2476,6 +2491,17 @@ const pixelOffice = (() => {
       }));
     },
 
+    // Is there an open desk for a new character?
+    hasFreeDesk() {
+      return DESKS.some(d => !d.occupied);
+    },
+
+    // Flash a "you came from the panel" pin over a character
+    highlightSession(id) {
+      const session = sessions.find(s => s.id === id);
+      if (session) session.character.highlight = Date.now();
+    },
+
     // For external event integration
     onEvent(sessionId, eventType) {
       let session = sessions.find(s => s.id === sessionId);
@@ -2517,6 +2543,8 @@ const pixelOffice = (() => {
   const idleTimeouts = {}; // Track idle timeouts per session
   const sessionMeta = {}; // external ID -> {name, color, activity} from server
   const IDLE_DELAY = 15000; // Wait 15 seconds after last tool_end before going idle
+  // arrived via /?agent=<id> from a panel card — pin that character once it spawns
+  let pendingHighlight = new URLSearchParams(location.search).get('agent');
 
   function applyMeta(externalId) {
     const m = sessionMeta[externalId];
@@ -2533,18 +2561,56 @@ const pixelOffice = (() => {
         const event = JSON.parse(e.data);
         if (event.type === 'connected') return;
 
-        // Server snapshot of all sessions — carries persona name + activity
+        // Server snapshot of all sessions — the office mirrors the panel from this:
+        // pre-load characters on connect, keep states in sync, and remove ones that
+        // were cleared/archived — instead of only reacting to live tool events.
         if (event.type === 'sessions') {
-          (event.sessions || []).forEach(s => {
+          const snap = event.sessions || [];
+          const present = new Set();
+          snap.forEach(s => {
+            present.add(s.sessionId);
             sessionMeta[s.sessionId] = {
               name: s.name || (s.persona && s.persona.name),
               color: s.persona && s.persona.color,
               activity: s.activity,
             };
-            applyMeta(s.sessionId);
           });
+
+          // remove characters whose session is gone (cleared / archived / ended)
+          Object.keys(sessionMap).forEach(extId => {
+            if (!present.has(extId)) {
+              if (idleTimeouts[extId]) { clearTimeout(idleTimeouts[extId]); delete idleTimeouts[extId]; }
+              pixelOffice.removeSession(sessionMap[extId]);
+              delete sessionMap[extId];
+            }
+          });
+
+          // spawn/update — active first, so the limited desks go to the busy agents
+          const prio = s => s.needsAttention ? 1 : (['working','thinking','starting'].includes(s.state) ? 0 : 2);
+          [...snap].sort((a, b) => prio(a) - prio(b)).forEach(s => {
+            if (sessionMap[s.sessionId] === undefined && pixelOffice.hasFreeDesk()) {
+              const id = pixelOffice.addSession(s.title || s.cwd || s.sessionId);
+              if (id !== null) sessionMap[s.sessionId] = id;
+            }
+            if (sessionMap[s.sessionId] !== undefined) {
+              applyMeta(s.sessionId);
+              if (s.title) pixelOffice.setSessionTitle(s.title, sessionMap[s.sessionId]);
+              // coarse state from the server; finer typing/thinking still comes from live tool events
+              const st = s.needsAttention ? 'thinking'
+                : (['working','starting'].includes(s.state) ? 'typing'
+                : (s.state === 'thinking' ? 'thinking' : 'idle'));
+              pixelOffice.setSessionState(st, sessionMap[s.sessionId]);
+            }
+          });
+
+          // if we came from a panel card (/?agent=<id>), pin that character
+          if (pendingHighlight && sessionMap[pendingHighlight] !== undefined) {
+            pixelOffice.highlightSession(sessionMap[pendingHighlight]);
+            pendingHighlight = null;
+          }
+
           // "waiting for you" banner
-          const waiting = (event.sessions || []).filter(s => s.needsAttention);
+          const waiting = snap.filter(s => s.needsAttention);
           const bar = document.getElementById('alertbar');
           if (bar) {
             if (waiting.length) {

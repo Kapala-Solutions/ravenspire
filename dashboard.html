@@ -267,6 +267,8 @@
   .path { font-size: 11px; color: var(--muted); opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .openable { cursor: pointer; }
   .path.openable:hover, .team-sub.openable:hover { color: var(--accent); opacity: 1; text-decoration: underline; }
+  .avatar.office-link { cursor: pointer; transition: box-shadow .15s, transform .15s; }
+  .avatar.office-link:hover { box-shadow: 0 0 0 2px var(--accent); transform: scale(1.05); }
   .empty { color: var(--muted); text-align: center; padding: 80px 20px; }
   .empty h2 { color: var(--text); font-weight: 600; }
 
@@ -566,6 +568,11 @@
     grid.querySelectorAll('.path[data-open], .team-sub[data-open]').forEach(el => {
       el.onclick = (e) => { e.stopPropagation(); openFolder(el.dataset.open); };
     });
+
+    // avatar → jump to this agent in the office view
+    grid.querySelectorAll('.avatar[data-office]').forEach(el => {
+      el.onclick = (e) => { e.stopPropagation(); location.href = '/?agent=' + encodeURIComponent(el.dataset.office); };
+    });
     grid.querySelectorAll('.card').forEach(card => {
       card.onclick = (e) => {
         if (e.target.closest('.name, .rolesel, .info, .tipbox, .focusbtn')) return;
@@ -657,7 +664,7 @@
     return `
       <div class="card ${s.state} ${s.needsAttention ? 'attention' : ''}">
         <div class="row">
-          <div class="avatar" style="background:${p.color}">${esc(p.initial)}</div>
+          <div class="avatar office-link" data-office="${s.sessionId}" style="background:${p.color}" title="View ${esc(s.name || p.name)} in the office">${esc(p.initial)}</div>
           <div class="idblock">
             <div class="name" data-id="${s.sessionId}" title="click to rename">${esc(s.name || p.name)}</div>
             <div class="activity">${esc(s.activity || 'Working')}</div>
