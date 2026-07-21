@@ -267,6 +267,16 @@
   .path { font-size: 11px; color: var(--muted); opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .empty { color: var(--muted); text-align: center; padding: 80px 20px; }
   .empty h2 { color: var(--text); font-weight: 600; }
+
+  .filterbar { display: flex; align-items: center; gap: 8px; padding: 16px 24px 0; flex-wrap: wrap; }
+  .filter-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-right: 2px; }
+  .fchip { font-size: 12px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); cursor: pointer; font-weight: 600; transition: all .15s; }
+  .fchip:hover { color: var(--text); border-color: var(--accent); }
+  .fchip.on { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,0.14); }
+  .fchip.off { opacity: .45; }
+  .fchip.archive { margin-left: auto; color: var(--amber); border-color: #4a3a1e; background: #241b0f; }
+  .fchip.archive:hover { color: #ffd479; background: #2e2210; border-color: var(--amber); }
+  .filter-count { font-size: 12px; color: var(--muted); }
   code { background: var(--panel2); padding: 2px 6px; border-radius: 5px; font-size: 12px; }
 </style>
 </head>
@@ -319,6 +329,15 @@
   </div>
 
   <div id="alertbar" class="alertbar" style="display:none"></div>
+
+  <div class="filterbar" id="filterbar">
+    <span class="filter-label">Show</span>
+    <button class="fchip" data-bucket="working">⚡ Working</button>
+    <button class="fchip" data-bucket="waiting">⏳ Waiting</button>
+    <button class="fchip" data-bucket="idle">💤 Idle</button>
+    <span class="filter-count" id="filterCount"></span>
+    <button class="fchip archive" id="archiveOldBtn" title="Clear idle/ended sessions inactive for 30+ min. They're kept in History.">📦 Archive old</button>
+  </div>
 
   <div id="grid" class="grid"></div>
   <div id="toast" class="toast"></div>
@@ -433,10 +452,21 @@
     return `${s}s`;
   }
 
+  // ---- status filter ----
+  const STATUS_BUCKETS = ['working', 'waiting', 'idle'];
+  function bucketOf(s) {
+    if (s.needsAttention) return 'waiting';
+    if (['working', 'thinking', 'starting'].includes(s.state)) return 'working';
+    return 'idle'; // idle + ended
+  }
+  function enabledBuckets() {
+    try { const v = JSON.parse(localStorage.getItem('aihq-filter')); if (Array.isArray(v)) return new Set(v); } catch {}
+    return new Set(STATUS_BUCKETS);
+  }
+
   function render() {
     const grid = document.getElementById('grid');
     const empty = document.getElementById('empty');
-    empty.style.display = sessions.length ? 'none' : 'block';
 
     let totTok = 0, totCost = 0, totLabor = 0, active = 0;
     for (const s of sessions) {
@@ -459,6 +489,20 @@
     const sorted = [...sessions].sort((a,b) =>
       prio(a) - prio(b) || new Date(b.lastActivity) - new Date(a.lastActivity));
 
+    // apply status filter
+    const enabled = enabledBuckets();
+    const visible = sorted.filter(s => enabled.has(bucketOf(s)));
+    const fc = document.getElementById('filterCount');
+    if (fc) fc.textContent = visible.length === sessions.length ? '' : `${visible.length} of ${sessions.length} shown`;
+    if (!visible.length) {
+      empty.style.display = 'block';
+      empty.innerHTML = sessions.length
+        ? '<h2>Nothing matches the filter</h2><p>Toggle a status chip above to show more sessions.</p>'
+        : '<h2>No sessions yet</h2><p>Start a Claude Code session in any IDE — it will appear here automatically.</p>';
+    } else {
+      empty.style.display = 'none';
+    }
+
     // Group sessions that belong to the same workspace (host+ide+cwd). Several
     // Claude Code sessions spawned by one IDE window show up as separate cards;
     // collapse them into one expandable "team" card. Toggle with the Group button.
@@ -466,7 +510,7 @@
     let items;
     if (groupOn) {
       const map = new Map();
-      for (const s of sorted) {
+      for (const s of visible) {
         const k = groupKey(s);
         if (!map.has(k)) map.set(k, []);
         map.get(k).push(s);
@@ -479,7 +523,7 @@
         : Math.max(...it.members.map(m => new Date(m.lastActivity)));
       items.sort((a,b) => itemPrio(a) - itemPrio(b) || itemTime(b) - itemTime(a));
     } else {
-      items = sorted.map(s => ({ type:'single', s }));
+      items = visible.map(s => ({ type:'single', s }));
     }
 
     grid.innerHTML = items.map(it => it.type === 'team' ? teamCardHTML(it.members) : cardHTML(it.s)).join('');
@@ -661,6 +705,39 @@
     paintGroup(); render();
   };
   paintGroup();
+
+  // status filter chips
+  function paintFilters() {
+    const en = enabledBuckets();
+    document.querySelectorAll('.fchip[data-bucket]').forEach(c => {
+      const on = en.has(c.dataset.bucket);
+      c.classList.toggle('on', on);
+      c.classList.toggle('off', !on);
+    });
+  }
+  document.querySelectorAll('.fchip[data-bucket]').forEach(c => {
+    c.onclick = () => {
+      const en = enabledBuckets();
+      const b = c.dataset.bucket;
+      if (en.has(b)) en.delete(b); else en.add(b);
+      localStorage.setItem('aihq-filter', JSON.stringify([...en]));
+      paintFilters(); render();
+    };
+  });
+  paintFilters();
+
+  // "Archive old" — clear idle/ended sessions inactive for 30+ min (kept in History)
+  document.getElementById('archiveOldBtn').onclick = () => {
+    const cutoff = Date.now() - 30 * 60 * 1000;
+    const old = sessions.filter(s => bucketOf(s) === 'idle' && new Date(s.lastActivity).getTime() < cutoff);
+    if (!old.length) { toast('No idle sessions older than 30 min'); return; }
+    if (!confirm(`Archive ${old.length} idle session${old.length > 1 ? 's' : ''}? They'll be cleared from the board but kept in History.`)) return;
+    Promise.all(old.map(s => fetch('/clear', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: s.sessionId }),
+    }))).then(() => toast(`Archived ${old.length} session${old.length > 1 ? 's' : ''} → History`))
+      .catch(() => toast('Archive failed', true));
+  };
 
   // request OS notification permission up front
   if ('Notification' in window && Notification.permission === 'default') {
