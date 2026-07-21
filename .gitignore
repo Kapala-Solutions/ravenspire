@@ -8,5 +8,6 @@ sessions-history.jsonl
 
 # local-only tooling
 .verify-tmp/
+.playwright-mcp/
 .claude/settings.local.json
 *.log

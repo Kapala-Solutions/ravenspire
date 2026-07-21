@@ -1,154 +1,141 @@
-# AI HQ - Claude Code Visualizer
+# AI HQ — Claude Code Control Panel
 
-A pixel art office that animates in real-time based on your Claude Code sessions. Each Claude session gets its own character that walks into the office and works at a desk.
+Real-time mission control for **every Claude Code session on your machine** — CLI, VS Code, and Claude Desktop, all at once. See who's working, what they're doing, what it's costing in API tokens, and what that work is *worth* in labor value — in a live dashboard, a pixel-art office, and a historical archive.
 
-![AI HQ Screenshot](screenshot.png)
+![AI HQ Control Panel](aihq-dashboard.png)
 
-## Features
+> **This is a heavily extended fork.** It started as a pixel-office toy (see [Credits](#credits--inspiration)) and grew into a full control panel: cost & labor accounting, session grouping into teams, a history view with trend charts, cowork capture, and an installable desktop app (PWA).
 
-- **Side-scroller view** - Full building exterior with parking lot, trees, and interior office
-- **One character per session** - Each Claude Code session spawns a unique character
-- **5 workstations** - 4 in a pod arrangement, 1 separate desk
-- **Living office** - Boss with activities, secretary that greets people, character conversations
-- **Special characters** - Rare chance to spawn as alien, robot, werewolf, vampire, ninja, or zombie
-- **Session panel** - Shows all connected sessions with numbered badges matching shirt colors
-- **Configurable title** - Click the title to rename your office
-- **Network accessible** - Access from any machine on your network
+---
 
-## Quick Start
+## ✨ What this fork adds over the original
 
-### 1. Install dependencies
+The original AI HQ was a pixel office with one character per session. This version keeps that **and** layers on a real control panel:
+
+| Area | Added |
+| --- | --- |
+| **Control Panel** (`/dashboard`) | Rich per-session cards: persona name, live activity line, model, IDE, token breakdown (in/out/cache), API cost + cost breakdown, message count, uptime |
+| **Session grouping** | Sessions from the same workspace (host + IDE + folder) collapse into expandable **team cards** with aggregate tokens/cost/labor — no more 8 cards for one project |
+| **History** (`/history`) | Lifetime stat tiles, SVG trend charts (tokens / cost / sessions over time), and a sortable **per-session archive** that survives clearing the board |
+| **Cost & labor accounting** | Infers a role per session → salary → hourly rate → **labor value** from active work time; API cost estimated from the transcript |
+| **"Needs you" alerts** | Pulsing banner, chime, OS notification, and tab-title badge when an agent finishes or asks for input (with mute) |
+| **Click-to-focus** | Click a card to bring that session's terminal/IDE window to the front; Claude Desktop sessions open via `claude://resume` deep link |
+| **Two ingestion paths** | Hook-based capture for Claude **Code**, plus a log watcher for Claude Desktop **cowork** sessions (incl. VM sessions that can't post back). A `code` / `cowork` badge marks each |
+| **Installable app (PWA)** | Custom favicon/icons, web app manifest, service worker (offline app shell), and app shortcuts — install it as a standalone desktop window |
+| **Settings** | In-app gear: **Start with Windows** toggle (wires the autostart scripts) and **Install as app** |
+| **Quality-of-life** | Rename any session, reassign its role, persona names that never collide, a stale-session sweep, and network access from other machines |
+
+---
+
+## 📸 Screenshots
+
+### Control Panel — grouped team cards, live cost & labor
+![Control Panel](aihq-dashboard.png)
+
+### History — trends over time + per-session archive
+![History](aihq-history.png)
+
+### Pixel Office — the original real-time office view (`/`)
+![Pixel Office](screenshot.png)
+
+---
+
+## 🚀 Quick start
+
+### 1. Install & run
 
 ```bash
-cd /path/to/ai-hq
-npm install ws
-```
-
-### 2. Start the server
-
-```bash
+npm install
 node server.js
 ```
 
-Or use `start.bat` on Windows for auto-restart on changes.
+The server listens on **http://localhost:3456** (and prints your network URL). It serves three views:
 
-Open http://localhost:3456 in your browser. The server will display the network URL for access from other machines.
+| URL | View |
+| --- | --- |
+| `/` | Pixel-art office |
+| `/dashboard` | Control panel (cards, grouping, cost/labor) |
+| `/history` | Trends + session archive |
 
-### 3. Configure Claude Code hooks
+### 2. Wire up Claude Code hooks
 
-Create the PowerShell script at a location like `C:/Users/<YOUR_USERNAME>/ai-hq/send-event.ps1` (the `send-event.ps1` file is included in this repo).
+Add these to `~/.claude/settings.json` so every Claude Code session reports in. Replace the path with wherever this repo lives:
 
-Add the hooks to your Claude Code settings (`~/.claude/settings.json`):
-
-```json
+```jsonc
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -Command \"& 'C:/Users/<YOUR_USERNAME>/ai-hq/send-event.ps1' -Type tool_start -Tool $env:CLAUDE_TOOL_NAME\""
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -Command \"& 'C:/Users/<YOUR_USERNAME>/ai-hq/send-event.ps1' -Type tool_end -Tool $env:CLAUDE_TOOL_NAME\""
-          }
-        ]
-      }
-    ]
+    "SessionStart":     [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type SessionStart     -Server 'http://127.0.0.1:3456'\"" }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type UserPromptSubmit -Server 'http://127.0.0.1:3456'\"" }] }],
+    "PreToolUse":       [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type PreToolUse  -Server 'http://127.0.0.1:3456'\"" }] }],
+    "PostToolUse":      [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type PostToolUse -Server 'http://127.0.0.1:3456'\"" }] }],
+    "Stop":             [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type Stop         -Server 'http://127.0.0.1:3456'\"" }] }],
+    "Notification":     [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type Notification -Server 'http://127.0.0.1:3456'\"" }] }],
+    "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type SessionEnd   -Server 'http://127.0.0.1:3456'\"" }] }]
   }
 }
 ```
 
-**Important:** Replace `<YOUR_USERNAME>` with your actual Windows username.
+`send-event.ps1` reads the hook payload from stdin (real session id, cwd, transcript path, tool target, notification message, IDE) and POSTs it to the server. Because these hooks live in the **global** settings file, every IDE and CLI session is covered automatically. Restart Claude Code after adding them.
 
-### 4. Restart Claude Code
+### 3. (Optional) Start with Windows & install as an app
 
-Close and reopen Claude Code for the hooks to take effect.
+- Open **⚙ Settings** in the panel and flip **Start with Windows** — or run `install-autostart.ps1` directly. It drops a hidden launcher in your Startup folder.
+- Click **Install as app** (or your browser's install button) to run AI HQ as a standalone desktop window.
 
-## How It Works
+---
 
-Each Claude Code session will:
-1. Create a new character that walks in from the parking lot
-2. Go to an available desk
-3. Animate based on what Claude is doing:
-   - **Typing** - Edit, Write, Bash, NotebookEdit tools
-   - **Thinking** - Read, Search, Glob, Grep, Task tools
-   - **Idle/Wandering** - After 15 seconds of no tool activity
-4. Characters persist at their desks between sessions (no leaving animation)
+## 🧠 How it works
 
-## Session Panel
+```
+Claude Code hooks ─┐
+(send-event.ps1)   │
+                   ├──▶  server.js (:3456)  ──▶  WebSocket  ──▶  /  · /dashboard · /history
+Claude Desktop     │        · session store          broadcast
+main.log watcher ──┘        · transcript parse (tokens/cost/model)
+(desktop-watcher.js)        · role → labor value
+                            · history.csv + sessions-history.jsonl
+```
 
-The panel in the top-right shows all connected sessions:
-- Numbered badge matching the character's shirt color
-- Session title (working directory name)
-- Current state with color indicator:
-  - Green = typing/coding
-  - Orange = thinking
-  - Blue = walking
-  - Gray = idle
+- **Two sources feed one store.** Claude Code fires hooks; Claude Desktop **cowork** sessions (which may run in a VM that can't reach the host) are picked up by tailing the desktop app's `main.log`. Sessions merge by id and carry a `code` / `cowork` source badge.
+- **The server is authoritative.** It parses each session's transcript for accurate tokens/cost/model, assigns a stable persona, computes a live activity line, and persists state.
+- **History is durable.** Aggregate snapshots append to `history.csv`; every finished (or cleared) session is archived to `sessions-history.jsonl` so nothing is lost.
 
-## Endpoints
+---
 
-- `GET /` - Main visualization
-- `GET /setup` - Plain text setup instructions (for other Claude sessions to read)
-- `GET /status` - Debug info showing recent events and connected clients
-- `POST /event` - Event endpoint for Claude Code hooks
+## ⚙️ Configuration — `config.json`
 
-## Event Format
-
-POST to `http://localhost:3456/event`:
-
-```json
+```jsonc
 {
-  "type": "tool_start",
-  "tool": "Edit",
-  "sessionId": "unique-session-id",
-  "title": "my-project"
+  "port": 3456,
+  "autoStart": true,
+  "staleMinutes": 15,      // mark a quiet session "idle" after N minutes
+  "abandonMinutes": 45,    // drop a stuck "needs you" alert after N minutes
+  "watchDesktop": true     // set false to disable the cowork log watcher
+  // "desktopLogPath": "…" // override the Claude Desktop main.log location
 }
 ```
 
-Event types:
-- `tool_start` - Claude started using a tool
-- `tool_end` - Claude finished using a tool
+The port can also be overridden with the `PORT` environment variable.
 
-## API
+---
 
-```javascript
-// Add a session manually
-pixelOffice.addSession('My Project')
+## 🔌 HTTP API
 
-// Remove a session
-pixelOffice.removeSession(id)
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/sessions` | All sessions (JSON) |
+| `GET` | `/history.csv` | Aggregate time-series |
+| `GET` | `/history/sessions` | Per-session archive + live sessions (merged, deduped) |
+| `GET` | `/roles` | Role list + salary table |
+| `GET` | `/autostart` · `POST` `/autostart` | Read / toggle "Start with Windows" |
+| `POST` | `/event` | Hook event ingestion |
+| `POST` | `/focus` | Bring a session's window to front |
+| `POST` | `/rename` · `/role` · `/clear` | Rename, set role, clear sessions |
 
-// Set session state
-pixelOffice.setSessionState('typing', id)
-pixelOffice.setSessionState('thinking', id)
-pixelOffice.setSessionState('idle', id)
-
-// Set session title
-pixelOffice.setSessionTitle('New Title', id)
-
-// Get all sessions
-pixelOffice.getSessions()
-```
-
-## Hidden Features
-
-- Click the **sun** to restart the server
-- Click the **title** to rename your office (saved to localStorage)
+---
 
 ## Credits & Inspiration
 
 Built upon [**jaysonbrush/ai-hq**](https://github.com/jaysonbrush/ai-hq) — huge thanks to Jayson for the original AI HQ implementation this control panel grew from.
 
-The original AI HQ was itself inspired by [PixelHQ](https://www.reddit.com/r/ClaudeCode/comments/1qrbsfa/i_built_a_pixel_office_that_animates_in_realtime/) by [u/Waynedevvv](https://www.reddit.com/user/Waynedevvv/) - a mobile app that does the same concept on your phone. Check out the original if you want a native iOS experience!
+The original AI HQ was itself inspired by [PixelHQ](https://www.reddit.com/r/ClaudeCode/comments/1qrbsfa/i_built_a_pixel_office_that_animates_in_realtime/) by [u/Waynedevvv](https://www.reddit.com/user/Waynedevvv/) — a mobile app that does the same concept on your phone. Check out the original if you want a native iOS experience!
