@@ -265,6 +265,8 @@
 
   .task { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .path { font-size: 11px; color: var(--muted); opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .openable { cursor: pointer; }
+  .path.openable:hover, .team-sub.openable:hover { color: var(--accent); opacity: 1; text-decoration: underline; }
   .empty { color: var(--muted); text-align: center; padding: 80px 20px; }
   .empty h2 { color: var(--text); font-weight: 600; }
 
@@ -559,6 +561,11 @@
     grid.querySelectorAll('.focusbtn').forEach(el => {
       el.onclick = (e) => { e.stopPropagation(); focusSession(el.dataset.focus); };
     });
+
+    // open folder in OS explorer (stopPropagation so it doesn't focus the card / toggle the team)
+    grid.querySelectorAll('.path[data-open], .team-sub[data-open]').forEach(el => {
+      el.onclick = (e) => { e.stopPropagation(); openFolder(el.dataset.open); };
+    });
     grid.querySelectorAll('.card').forEach(card => {
       card.onclick = (e) => {
         if (e.target.closest('.name, .rolesel, .info, .tipbox, .focusbtn')) return;
@@ -585,6 +592,14 @@
       .then(r => r.json())
       .then(d => { if (!d.ok) toast(`Couldn't focus: ${d.reason || d.result || 'unknown'}`, true); })
       .catch(() => toast('Focus request failed', true));
+  }
+
+  function openFolder(id) {
+    fetch('/open-folder', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ sessionId: id }) })
+      .then(r => r.json())
+      .then(d => toast(d.ok ? 'Opened folder' : `Couldn't open folder: ${d.reason || 'error'}`, !d.ok))
+      .catch(() => toast('Open folder failed', true));
   }
 
   // Workspace identity: same machine + IDE + folder => same "team".
@@ -615,7 +630,7 @@
           <div class="team-avatars">${avatars}${more}</div>
           <div class="team-info">
             <div class="team-name">${esc(proj)} <span class="team-badge">${members.length} agents</span> ${stateBadge}</div>
-            <div class="team-sub">${ideIcon(first.ide)} · ${esc(first.cwd)}</div>
+            <div class="team-sub openable" data-open="${first.sessionId}" title="Open folder: ${esc(first.cwd)}">${ideIcon(first.ide)} · 📂 ${esc(first.cwd)}</div>
           </div>
           <div class="team-metrics">
             <div><div class="tv">${fmt(tok)}</div><div class="tl">Tokens</div></div>
@@ -685,7 +700,7 @@
           <span class="o">Out ${fmt(tok.output)}</span>
           <span class="c">Cache ${fmt((tok.cacheCreation||0)+(tok.cacheRead||0))}</span>
         </div>
-        <div class="path" title="${esc(s.cwd)}">${esc(s.cwd)}</div>
+        <div class="path openable" data-open="${s.sessionId}" title="Open folder: ${esc(s.cwd)}">📂 ${esc(s.cwd)}</div>
       </div>`;
   }
 

@@ -13,7 +13,7 @@ const SHELL = [
 // Data/control endpoints that must always hit the network (never cached).
 // NB: '/history' (no suffix) is the HTML page, handled by the navigation branch —
 // only the data routes '/history.csv' and '/history/sessions' are bypassed here.
-const BYPASS = ['/sessions', '/event', '/history.csv', '/history/sessions', '/roles', '/status', '/debug', '/focus', '/role', '/rename', '/clear', '/restart', '/autostart'];
+const BYPASS = ['/sessions', '/event', '/history.csv', '/history/sessions', '/roles', '/status', '/debug', '/focus', '/open-folder', '/role', '/rename', '/clear', '/restart', '/autostart'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

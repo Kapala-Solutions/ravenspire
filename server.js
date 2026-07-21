@@ -400,6 +400,27 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Open a session's working directory in the OS file explorer: POST /open-folder {sessionId}
+  // Path comes from the stored session (never a client-supplied path) and must be a real dir.
+  if (req.method === 'POST' && req.url === '/open-folder') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      const reply = (obj, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
+      let s;
+      try { s = sessions.get(JSON.parse(body).sessionId); } catch {}
+      if (!s) return reply({ ok: false, reason: 'unknown session' });
+      if (s.host && s.host.toLowerCase() !== os.hostname().toLowerCase()) return reply({ ok: false, reason: `runs on ${s.host}, not this machine` });
+      const dir = s.cwd;
+      if (!dir || !fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return reply({ ok: false, reason: 'folder not found on this machine' });
+      const opener = process.platform === 'win32' ? 'explorer' : (process.platform === 'darwin' ? 'open' : 'xdg-open');
+      // explorer.exe returns a non-zero exit code even on success, so don't treat that as failure.
+      execFile(opener, [dir], { timeout: 4000 }, () => {});
+      reply({ ok: true, path: dir });
+    });
+    return;
+  }
+
   // Per-session history: durable archive (JSONL) merged with currently-tracked
   // live sessions, deduped by sessionId, newest first. Live sessions appear
   // immediately (marked live:true); once they end/clear the archive row wins.
