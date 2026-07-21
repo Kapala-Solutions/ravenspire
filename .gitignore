@@ -1,2 +1,12 @@
 node_modules/
 package-lock.json
+
+# runtime state / generated data (not source)
+sessions.json
+history.csv
+sessions-history.jsonl
+
+# local-only tooling
+.verify-tmp/
+.claude/settings.local.json
+*.log

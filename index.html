@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI HQ</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="application-name" content="AI HQ">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AI HQ">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -67,6 +76,33 @@
     }
     .session-count {
       color: #4aff4a;
+    }
+    .view-toggle {
+      color: #cfd6e6;
+      text-decoration: none;
+      font-size: 12px;
+      padding: 5px 12px;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .view-toggle:hover {
+      color: #fff;
+      border-color: #5b8cff;
+      background: rgba(91,140,255,0.15);
+    }
+    .office-alertbar {
+      position: absolute; top: 46px; left: 50%; transform: translateX(-50%);
+      z-index: 50; padding: 10px 18px; border-radius: 10px;
+      background: rgba(30,22,8,0.95); border: 1px solid #f5b53d; color: #ffe6b0;
+      font-size: 13px; font-weight: bold; white-space: nowrap;
+      box-shadow: 0 6px 24px rgba(0,0,0,.5);
+      animation: officealert 1.5s ease-in-out infinite;
+    }
+    @keyframes officealert {
+      0%,100% { box-shadow: 0 0 0 0 rgba(245,181,61,0); }
+      50% { box-shadow: 0 0 20px 2px rgba(245,181,61,.5); }
     }
     .canvas-wrapper {
       flex: 1;
@@ -172,9 +208,11 @@
       text-overflow: ellipsis;
     }
     .session-state {
-      color: #888;
+      color: #aab;
       font-size: 10px;
-      text-transform: capitalize;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .session-empty {
       color: #666;
@@ -261,6 +299,71 @@
       color: #aaa;
     }
     .setup-note strong { color: #fff; }
+
+    /* Nav + settings */
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    .icon-btn {
+      background: rgba(255,255,255,0.06);
+      color: #cfd6e6;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 6px;
+      width: 30px; height: 30px;
+      font-size: 16px; line-height: 1;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .icon-btn:hover { color: #fff; border-color: #5b8cff; background: rgba(91,140,255,0.18); transform: rotate(30deg); }
+    .settings-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.55);
+      display: none; align-items: center; justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    .settings-overlay.open { display: flex; }
+    .settings-modal {
+      background: #1f2440;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 12px;
+      width: min(440px, 92vw);
+      box-shadow: 0 20px 60px rgba(0,0,0,.6);
+      font-family: 'Courier New', monospace;
+      color: #eee;
+      overflow: hidden;
+    }
+    .settings-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .settings-head h2 { font-size: 15px; letter-spacing: 2px; color: #fff; }
+    .settings-close { background: none; border: none; color: #9aa4bf; font-size: 22px; cursor: pointer; line-height: 1; }
+    .settings-close:hover { color: #fff; }
+    .settings-body { padding: 8px 18px 18px; }
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 13px; color: #fff; }
+    .setting-desc { font-size: 11px; color: #9aa4bf; margin-top: 3px; max-width: 260px; line-height: 1.4; }
+    .setting-status { font-size: 11px; margin-top: 4px; min-height: 14px; }
+    .setting-status.ok { color: #4aff9a; }
+    .setting-status.err { color: #ff7b7b; }
+    /* toggle switch */
+    .switch { position: relative; width: 46px; height: 26px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; cursor: pointer;
+      background: #3a3f5c; border-radius: 26px; transition: .2s;
+    }
+    .slider:before {
+      content: ""; position: absolute; height: 20px; width: 20px;
+      left: 3px; top: 3px; background: #cfd6e6; border-radius: 50%; transition: .2s;
+    }
+    .switch input:checked + .slider { background: #4a8cff; }
+    .switch input:checked + .slider:before { transform: translateX(20px); background: #fff; }
+    .switch input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
+    .settings-foot { padding: 10px 18px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 10px; color: #7b84a0; text-align: center; }
   </style>
 </head>
 <body>
@@ -270,7 +373,45 @@
       <div class="status-bar">
         <span class="session-count" id="sessionCount">0 active sessions</span>
       </div>
+      <div class="nav-actions">
+        <a href="/dashboard" class="view-toggle" title="Switch to the data control panel">📊 Control Panel</a>
+        <a href="/history" class="view-toggle" title="Historical trends & session archive">📈 History</a>
+        <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
+      </div>
     </div>
+    <div id="alertbar" class="office-alertbar" style="display:none"></div>
+
+    <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+      <div class="settings-modal" role="dialog" aria-modal="true" aria-label="Settings">
+        <div class="settings-head">
+          <h2>⚙ SETTINGS</h2>
+          <button class="settings-close" onclick="closeSettings()" aria-label="Close">&times;</button>
+        </div>
+        <div class="settings-body">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Start with Windows</div>
+              <div class="setting-desc">Launch AI HQ automatically (hidden) when you log in to Windows.</div>
+              <div class="setting-status" id="autostartStatus"></div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="autostartToggle" onchange="toggleAutostart(this)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Install as app</div>
+              <div class="setting-desc">Install the control panel as a desktop app for a dedicated window.</div>
+              <div class="setting-status" id="installStatus"></div>
+            </div>
+            <button class="view-toggle" id="installBtn" onclick="installApp()" disabled>Install</button>
+          </div>
+        </div>
+        <div class="settings-foot">AI HQ · Claude Code Control Panel</div>
+      </div>
+    </div>
+
     <div class="canvas-wrapper">
       <canvas id="office"></canvas>
     </div>
@@ -334,6 +475,89 @@ function saveTitle(input) {
   localStorage.setItem('officeTitle', officeTitle);
   document.getElementById('headerTitle').textContent = officeTitle;
   document.title = officeTitle;
+}
+
+// ---- PWA: register service worker + capture install prompt ----
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstall = e;
+  const btn = document.getElementById('installBtn');
+  if (btn) { btn.disabled = false; }
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  setInstallStatus('Installed', 'ok');
+  const btn = document.getElementById('installBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Installed'; }
+});
+function setInstallStatus(msg, cls) {
+  const el = document.getElementById('installStatus');
+  if (el) { el.textContent = msg; el.className = 'setting-status ' + (cls || ''); }
+}
+async function installApp() {
+  if (!deferredInstall) {
+    if (window.matchMedia('(display-mode: standalone)').matches) return setInstallStatus('Already running as an app.', 'ok');
+    return setInstallStatus('Use your browser menu → "Install app".', '');
+  }
+  deferredInstall.prompt();
+  const { outcome } = await deferredInstall.userChoice;
+  setInstallStatus(outcome === 'accepted' ? 'Installing…' : 'Install dismissed.', outcome === 'accepted' ? 'ok' : '');
+  deferredInstall = null;
+}
+
+// ---- Settings modal + "Start with Windows" ----
+function openSettings() {
+  document.getElementById('settingsOverlay').classList.add('open');
+  refreshAutostart();
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    const btn = document.getElementById('installBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Installed'; }
+    setInstallStatus('Running as an installed app.', 'ok');
+  }
+}
+function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSettings(); });
+
+function setAutostartStatus(msg, cls) {
+  const el = document.getElementById('autostartStatus');
+  if (el) { el.textContent = msg || ''; el.className = 'setting-status ' + (cls || ''); }
+}
+async function refreshAutostart() {
+  const toggle = document.getElementById('autostartToggle');
+  setAutostartStatus('Checking…', '');
+  try {
+    const r = await fetch('/autostart').then((x) => x.json());
+    if (!r.supported) { toggle.checked = false; toggle.disabled = true; setAutostartStatus('Windows only.', ''); return; }
+    toggle.disabled = false;
+    toggle.checked = !!r.enabled;
+    setAutostartStatus(r.enabled ? 'Enabled — launches on login.' : 'Disabled.', r.enabled ? 'ok' : '');
+  } catch {
+    toggle.disabled = true;
+    setAutostartStatus('Server unreachable.', 'err');
+  }
+}
+async function toggleAutostart(input) {
+  const enabled = input.checked;
+  input.disabled = true;
+  setAutostartStatus(enabled ? 'Enabling…' : 'Disabling…', '');
+  try {
+    const r = await fetch('/autostart', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    }).then((x) => x.json());
+    input.checked = !!r.enabled;
+    if (r.ok) setAutostartStatus(r.enabled ? 'Enabled — launches on login.' : 'Disabled.', r.enabled ? 'ok' : '');
+    else setAutostartStatus('Failed: ' + (r.error || r.reason || 'unknown'), 'err');
+  } catch {
+    input.checked = !enabled;
+    setAutostartStatus('Request failed.', 'err');
+  } finally {
+    input.disabled = false;
+  }
 }
 
 const pixelOffice = (() => {
@@ -1114,7 +1338,33 @@ const pixelOffice = (() => {
         ctx.fillText(this.speechBubble, x, bubbleY + 14);
         ctx.textAlign = 'left';
       }
+
+      // Persona name tag above the head
+      if (this.personaName) {
+        const tagY = y - 34;
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        const label = this.personaName;
+        const w = ctx.measureText(label).width + 12;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        roundRectPath(x - w / 2, tagY - 10, w, 15, 4);
+        ctx.fill();
+        ctx.fillStyle = this.tagColor || '#fff';
+        ctx.fillText(label, x, tagY + 1);
+        ctx.textAlign = 'left';
+      }
     }
+  }
+
+  // Small helper for rounded rectangles (name tags)
+  function roundRectPath(rx, ry, rw, rh, r) {
+    ctx.beginPath();
+    ctx.moveTo(rx + r, ry);
+    ctx.arcTo(rx + rw, ry, rx + rw, ry + rh, r);
+    ctx.arcTo(rx + rw, ry + rh, rx, ry + rh, r);
+    ctx.arcTo(rx, ry + rh, rx, ry, r);
+    ctx.arcTo(rx, ry, rx + rw, ry, r);
+    ctx.closePath();
   }
 
   // Casual conversation phrases for idle characters
@@ -2119,13 +2369,15 @@ const pixelOffice = (() => {
         alien: '👽', robot: '🤖', werewolf: '🐺', vampire: '🧛', ninja: '🥷', zombie: '🧟'
       };
       const specialIcon = c.special ? specialIcons[c.special.type] || '' : '';
+      const label = c.personaName || c.title;
+      const sub = c.activity || state;
       return `
         <div class="session-item">
-          <div class="session-number" style="background: ${c.shirt}">${num}</div>
+          <div class="session-number" style="background: ${c.tagColor || c.shirt}">${escapeHtml((c.personaName||'#')[0])}</div>
           <div class="session-dot ${state}"></div>
           <div class="session-info">
-            <div class="session-title">${specialIcon} ${escapeHtml(c.title)}</div>
-            <div class="session-state">${state}</div>
+            <div class="session-title">${specialIcon} ${escapeHtml(label)}</div>
+            <div class="session-state">${escapeHtml(sub)}</div>
           </div>
         </div>
       `;
@@ -2172,6 +2424,17 @@ const pixelOffice = (() => {
         session.character.title = title;
         updateSessionPanel();
       }
+    },
+
+    // Enrich a character with persona name + live activity from the server snapshot
+    setSessionMeta(id, meta) {
+      const session = sessions.find(s => s.id === id);
+      if (!session) return;
+      const c = session.character;
+      if (meta.name) c.personaName = meta.name;
+      if (meta.color) c.tagColor = meta.color;
+      if (meta.activity) c.activity = meta.activity;
+      updateSessionPanel();
     },
 
     removeSession(id) {
@@ -2252,7 +2515,15 @@ const pixelOffice = (() => {
   let ws;
   const sessionMap = {}; // Map external session IDs to internal IDs
   const idleTimeouts = {}; // Track idle timeouts per session
+  const sessionMeta = {}; // external ID -> {name, color, activity} from server
   const IDLE_DELAY = 15000; // Wait 15 seconds after last tool_end before going idle
+
+  function applyMeta(externalId) {
+    const m = sessionMeta[externalId];
+    if (m && sessionMap[externalId] !== undefined) {
+      pixelOffice.setSessionMeta(sessionMap[externalId], m);
+    }
+  }
 
   function connect() {
     ws = new WebSocket(wsUrl);
@@ -2261,6 +2532,31 @@ const pixelOffice = (() => {
       try {
         const event = JSON.parse(e.data);
         if (event.type === 'connected') return;
+
+        // Server snapshot of all sessions — carries persona name + activity
+        if (event.type === 'sessions') {
+          (event.sessions || []).forEach(s => {
+            sessionMeta[s.sessionId] = {
+              name: s.name || (s.persona && s.persona.name),
+              color: s.persona && s.persona.color,
+              activity: s.activity,
+            };
+            applyMeta(s.sessionId);
+          });
+          // "waiting for you" banner
+          const waiting = (event.sessions || []).filter(s => s.needsAttention);
+          const bar = document.getElementById('alertbar');
+          if (bar) {
+            if (waiting.length) {
+              const who = waiting.map(s => `${s.name} (${s.attentionReason || 'waiting'})`).join('  ·  ');
+              bar.textContent = `🔔 ${waiting.length} waiting for you — ${who}`;
+              bar.style.display = 'block';
+            } else {
+              bar.style.display = 'none';
+            }
+          }
+          return;
+        }
 
         const externalId = event.sessionId || 'default';
         const sessionTitle = event.title || event.cwd || externalId;
@@ -2279,7 +2575,7 @@ const pixelOffice = (() => {
           // Create session if needed
           if (sessionMap[externalId] === undefined) {
             const id = pixelOffice.addSession(sessionTitle);
-            if (id !== null) sessionMap[externalId] = id;
+            if (id !== null) { sessionMap[externalId] = id; applyMeta(externalId); }
           }
 
           // Update title if provided

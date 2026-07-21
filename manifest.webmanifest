@@ -1,0 +1,25 @@
+{
+  "name": "AI HQ — Claude Code Control Panel",
+  "short_name": "AI HQ",
+  "description": "Real-time control panel and pixel-art office for your Claude Code sessions.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "categories": ["productivity", "developer", "utilities"],
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Office view", "short_name": "Office", "url": "/", "description": "Pixel-art office of live sessions" },
+    { "name": "Control Panel", "short_name": "Panel", "url": "/dashboard", "description": "Data dashboard of all sessions" },
+    { "name": "History", "short_name": "History", "url": "/history", "description": "Historical trends & session archive" }
+  ]
+}
