@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AI HQ — History</title>
+<title>AgentQuest — History</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0b0e14">
-<meta name="application-name" content="AI HQ">
+<meta name="application-name" content="AgentQuest">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="AI HQ">
+<meta name="apple-mobile-web-app-title" content="AgentQuest">
 <style>
   :root {
     --bg: #0b0e14; --panel: #141925; --panel2: #1b2130; --border: #262d3d;
@@ -95,6 +95,17 @@
   .task-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
   .pill { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--panel2); border: 1px solid var(--border); color: var(--muted); }
   .reason-cleared { color: var(--amber); } .reason-session_end { color: var(--green); } .reason-live { color: var(--blue); }
+
+  /* response-time analytics */
+  .resp-flex { display: flex; gap: 16px; margin-bottom: 26px; align-items: stretch; flex-wrap: wrap; }
+  .resp-buckets { flex: 0 0 330px; padding-bottom: 14px; }
+  .resp-table { flex: 1; min-width: 380px; max-height: 330px; overflow-y: auto; }
+  .bucket-row { display: flex; align-items: center; gap: 8px; margin: 10px 4px; font-size: 11px; color: var(--muted); }
+  .bucket-row .bl { width: 58px; text-align: right; flex: 0 0 auto; }
+  .bucket-row .bar { height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #7fa8ff); flex: 0 0 auto; }
+  .bucket-row .bv { color: var(--text); font-weight: 600; }
+  .via-reply { color: var(--green); } .via-resumed { color: var(--blue); } .via-focus { color: var(--accent); }
+  .via-abandoned { color: var(--red); } .via-ended { color: var(--gray); }
   .empty { text-align: center; color: var(--muted); padding: 40px; }
 
   /* settings modal (shared) */
@@ -124,12 +135,12 @@
 </head>
 <body>
   <header>
-    <h1><span class="dot">●</span> AI HQ · History</h1>
+    <h1><span class="dot">●</span> ⚔ AgentQuest · History</h1>
     <div class="spacer"></div>
     <button class="toplink" id="refreshBtn" onclick="loadAll()" title="Reload history">↻ Refresh</button>
-    <a class="toplink" href="/">🏢 Office</a>
-    <a class="toplink" href="/dashboard">📊 Control Panel</a>
+        <a class="toplink" href="/dashboard">📊 Control Panel</a>
     <a class="toplink active" href="/history">📈 History</a>
+    <a class="toplink" href="/rpg" title="Guild of Agents — RPG quest view">⚔️ RPG</a>
     <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
   </header>
 
@@ -140,7 +151,7 @@
         <div class="setting-row">
           <div>
             <div class="setting-label">Start with Windows</div>
-            <div class="setting-desc">Launch AI HQ automatically (hidden) when you log in to Windows.</div>
+            <div class="setting-desc">Launch AgentQuest automatically (hidden) when you log in to Windows.</div>
             <div class="setting-status" id="autostartStatus"></div>
           </div>
           <label class="switch"><input type="checkbox" id="autostartToggle" onchange="toggleAutostart(this)"><span class="slider"></span></label>
@@ -154,7 +165,7 @@
           <button class="toplink" id="installBtn" onclick="installApp()" disabled>Install</button>
         </div>
       </div>
-      <div class="settings-foot">AI HQ · Claude Code Control Panel</div>
+      <div class="settings-foot">AgentQuest · mission control for your AI agents</div>
     </div>
   </div>
 
@@ -162,6 +173,24 @@
     <div class="tiles" id="tiles"></div>
 
     <div class="charts" id="charts"></div>
+
+    <div class="section-head">
+      <h2>Response times</h2>
+      <span class="count" id="respCount"></span>
+    </div>
+    <div class="tiles" id="respTiles"></div>
+    <div class="resp-flex">
+      <div class="chart-card resp-buckets">
+        <div class="chart-head"><h3>How long agents wait for you</h3></div>
+        <div id="respBuckets"></div>
+      </div>
+      <div class="table-wrap resp-table">
+        <table>
+          <thead><tr><th>When</th><th>Hero</th><th>Project</th><th>Reason</th><th class="num">Waited</th><th>Resolved by</th></tr></thead>
+          <tbody id="respBody"></tbody>
+        </table>
+      </div>
+    </div>
 
     <div class="section-head">
       <h2>Sessions</h2>
@@ -178,6 +207,20 @@
   <div class="chart-tooltip" id="chartTip"></div>
 
 <script>
+  // Running inside the AgentQuest shell? Nav links switch tabs instead of reloading.
+  (function() {
+    if (window.parent === window) return;
+    const MAP = { '/': 'rpg', '/dashboard': 'panel', '/history': 'history', '/rpg': 'rpg' };
+    document.querySelectorAll('a.toplink[href]').forEach(a => {
+      const view = MAP[a.getAttribute('href')];
+      if (!view) return;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        parent.postMessage({ type: 'nav', view }, location.origin);
+      });
+    });
+  })();
+
   // ---------- formatting helpers ----------
   function fmt(n) {
     n = +n || 0;
@@ -354,10 +397,50 @@
     renderTable();
   }
 
+  // ---------- response-time analytics ----------
+  function dur2(ms) {
+    const s = Math.max(0, Math.round((+ms || 0) / 1000));
+    if (s >= 3600) return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+    if (s >= 60) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+    return s + 's';
+  }
+  async function loadResponses() {
+    let rows = [];
+    try { rows = await fetch('/responses').then(r => r.json()); } catch {}
+    if (!Array.isArray(rows)) rows = [];
+    const answered = r => ['reply', 'resumed', 'focus'].includes(r.via);
+    const today = new Date().toDateString();
+    const todayRows = rows.filter(r => new Date(r.respondedAt).toDateString() === today);
+    const ansToday = todayRows.filter(answered);
+    const ignToday = todayRows.filter(r => !answered(r));
+    const med = arr => { if (!arr.length) return null; const s = arr.map(r => r.waitedMs).sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+    const wk = Date.now() - 7 * 864e5;
+    const ans7 = rows.filter(r => answered(r) && new Date(r.respondedAt).getTime() > wk);
+    const mT = med(ansToday), m7 = med(ans7);
+    document.getElementById('respCount').textContent = rows.length ? `${rows.length} alerts recorded` : '';
+    document.getElementById('respTiles').innerHTML = `
+      <div class="tile amber"><div class="v">${mT != null ? dur2(mT) : '—'}</div><div class="l">Median response today</div></div>
+      <div class="tile green"><div class="v">${ansToday.length}</div><div class="l">Answered today</div></div>
+      <div class="tile"><div class="v"${ignToday.length ? ' style="color:var(--red)"' : ''}>${ignToday.length}</div><div class="l">Ignored today</div></div>
+      <div class="tile blue"><div class="v">${m7 != null ? dur2(m7) : '—'}</div><div class="l">Median (7 days)</div></div>`;
+    const buckets = [['<1m', 0, 6e4], ['1–5m', 6e4, 3e5], ['5–15m', 3e5, 9e5], ['15–60m', 9e5, 36e5], ['>1h', 36e5, Infinity]];
+    const counts = buckets.map(([, lo, hi]) => ans7.filter(r => r.waitedMs >= lo && r.waitedMs < hi).length);
+    const max = Math.max(1, ...counts);
+    document.getElementById('respBuckets').innerHTML = buckets.map(([l], i) =>
+      `<div class="bucket-row"><span class="bl">${l}</span><span class="bar" style="width:${Math.round(counts[i] / max * 165) + 2}px"></span><span class="bv">${counts[i]}</span></div>`
+    ).join('') + '<div style="font-size:10px;color:var(--muted);margin:8px 4px 0">answered alerts · last 7 days</div>';
+    const viaLabel = { reply: '💬 reply', resumed: '▶ resumed', focus: '🖱 focus', abandoned: '🚫 abandoned', ended: '⏹ ended' };
+    document.getElementById('respBody').innerHTML = rows.slice(0, 30).map(r => `
+      <tr><td>${timeLabel(r.respondedAt)}</td><td>${esc(r.name || '—')}</td><td>${esc(r.project || '—')}</td>
+      <td class="task-cell" title="${esc(r.reason || '')}">${esc(r.reason || '—')}</td>
+      <td class="num">${dur2(r.waitedMs)}</td><td class="via-${esc(r.via)}">${viaLabel[r.via] || esc(r.via)}</td></tr>`).join('')
+      || '<tr><td colspan="6"><div class="empty">No alerts recorded yet — rows appear as agents wait for you and you respond.</div></td></tr>';
+  }
+
   async function loadAll() {
     const btn = document.getElementById('refreshBtn');
     btn.textContent = '↻ …';
-    await Promise.all([loadTrends(), loadSessions()]);
+    await Promise.all([loadTrends(), loadSessions(), loadResponses()]);
     btn.textContent = '↻ Refresh';
   }
   loadAll();

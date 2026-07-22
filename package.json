@@ -1,13 +1,15 @@
 {
-  "name": "ai-hq",
-  "version": "1.0.0",
-  "description": "A pixel art office visualization for Claude Code sessions. Watch your AI assistant work in real-time!",
+  "name": "agentquest",
+  "version": "2.0.0",
+  "description": "Mission control for your AI agents, as a JRPG — live quest world, control panel, cost & labor analytics, and native notifications for Claude Code sessions.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "setup": "node setup-hooks.js",
+    "icons": "node generate-icons.js"
   },
-  "keywords": ["claude", "pixel-art", "visualization", "claude-code"],
-  "author": "",
+  "keywords": ["claude", "claude-code", "agents", "dashboard", "rpg", "visualization", "monitoring", "pixel-art"],
+  "author": "Kapala Solutions",
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {

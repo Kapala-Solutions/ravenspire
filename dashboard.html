@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AI HQ — Control Panel</title>
+<title>AgentQuest — Control Panel</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0b0e14">
-<meta name="application-name" content="AI HQ">
+<meta name="application-name" content="AgentQuest">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="AI HQ">
+<meta name="apple-mobile-web-app-title" content="AgentQuest">
 <style>
   :root {
     --bg: #0b0e14;
@@ -127,6 +127,18 @@
     font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 700;
     background: rgba(245,181,61,.18); border: 1px solid var(--amber); color: var(--amber);
   }
+  .waitbadge [data-waiting] { color: var(--text); font-weight: 600; }
+  /* the agent's pending question, previewed on waiting cards */
+  .question {
+    background: rgba(245,181,61,.07); border-left: 3px solid var(--amber);
+    border-radius: 0 8px 8px 0; padding: 8px 10px; cursor: pointer;
+  }
+  .question .q-label { font-size: 10px; color: var(--amber); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+  .question .q-text {
+    font-size: 12px; color: var(--text); line-height: 1.45; white-space: pre-wrap; word-break: break-word;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .question.expanded .q-text { display: block; -webkit-line-clamp: unset; max-height: 300px; overflow-y: auto; }
   .card { cursor: pointer; }
   .focusbtn {
     background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
@@ -265,25 +277,41 @@
 
   .task { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .path { font-size: 11px; color: var(--muted); opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .openable { cursor: pointer; }
+  .path.openable:hover, .team-sub.openable:hover { color: var(--accent); opacity: 1; text-decoration: underline; }
+  .avatar.office-link { cursor: pointer; transition: box-shadow .15s, transform .15s; }
+  .avatar.office-link:hover { box-shadow: 0 0 0 2px var(--accent); transform: scale(1.05); }
   .empty { color: var(--muted); text-align: center; padding: 80px 20px; }
   .empty h2 { color: var(--text); font-weight: 600; }
+
+  .filterbar { display: flex; align-items: center; gap: 8px; padding: 16px 24px 0; flex-wrap: wrap; }
+  .filter-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-right: 2px; }
+  .fchip { font-size: 12px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); cursor: pointer; font-weight: 600; transition: all .15s; }
+  .fchip:hover { color: var(--text); border-color: var(--accent); }
+  .fchip.on { color: var(--text); border-color: var(--accent); background: rgba(91,140,255,0.14); }
+  .fchip.off { opacity: .45; }
+  .fchip.archive { margin-left: auto; color: var(--amber); border-color: #4a3a1e; background: #241b0f; }
+  .fchip.archive:hover { color: #ffd479; background: #2e2210; border-color: var(--amber); }
+  .filter-count { font-size: 12px; color: var(--muted); }
   code { background: var(--panel2); padding: 2px 6px; border-radius: 5px; font-size: 12px; }
 </style>
 </head>
 <body>
   <header>
-    <h1><span class="dot">●</span> AI HQ · Control Panel</h1>
+    <h1><span class="dot">●</span> ⚔ AgentQuest · Control Panel</h1>
     <div class="stats">
       <div class="stat"><div class="v" id="s-sessions">0</div><div class="l">Sessions</div></div>
       <div class="stat"><div class="v" id="s-active">0</div><div class="l">Active</div></div>
       <div class="stat"><div class="v" id="s-tokens">0</div><div class="l">Tokens</div></div>
       <div class="stat"><div class="v" id="s-cost">$0</div><div class="l">API Cost</div></div>
       <div class="stat"><div class="v" id="s-labor" style="color:var(--green)">$0</div><div class="l">Labor Value</div></div>
+      <div class="stat" title="Median time agents waited for you today (lower = more parallel throughput)"><div class="v" id="s-resp" style="color:var(--amber)">—</div><div class="l">Med. Response</div></div>
     </div>
     <button class="toplink" id="groupBtn" title="Group sessions by project/workspace">🧩 Group</button>
     <button class="toplink" id="muteBtn" title="Toggle alert sound">🔔</button>
-    <a class="toplink" href="/">🏢 Office view</a>
+    <a class="toplink" href="/">⚔️ Quest world</a>
     <a class="toplink" href="/history">📈 History</a>
+    <a class="toplink" href="/rpg" title="Guild of Agents — RPG quest view">⚔️ RPG</a>
     <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
   </header>
 
@@ -297,7 +325,7 @@
         <div class="setting-row">
           <div>
             <div class="setting-label">Start with Windows</div>
-            <div class="setting-desc">Launch AI HQ automatically (hidden) when you log in to Windows.</div>
+            <div class="setting-desc">Launch AgentQuest automatically (hidden) when you log in to Windows.</div>
             <div class="setting-status" id="autostartStatus"></div>
           </div>
           <label class="switch">
@@ -313,12 +341,53 @@
           </div>
           <button class="toplink" id="installBtn" onclick="installApp()" disabled>Install</button>
         </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Windows toasts</div>
+            <div class="setting-desc">Server-side native notifications when an agent needs you — works with no browser open.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="toastToggle" onchange="saveNotify({toast:this.checked})"><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Alert on turn-end too</div>
+            <div class="setting-desc">Also notify when an agent simply finishes its turn ("your turn"), not only on explicit input requests. Turn off if too noisy.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="stopsToggle" onchange="saveNotify({stops:this.checked})"><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div style="flex:1">
+            <div class="setting-label">Phone push (ntfy.sh)</div>
+            <div class="setting-desc">Install the free <b>ntfy</b> app, subscribe to a secret topic, and enter that topic here. Telegram/webhook can be set in config.json.</div>
+            <div style="display:flex; gap:8px; margin-top:8px">
+              <input type="text" id="ntfyTopic" placeholder="my-secret-topic-4821" style="flex:1; background:var(--panel2); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:6px 10px; font-size:12px" />
+              <button class="toplink" onclick="saveNotify({ntfyTopic: document.getElementById('ntfyTopic').value})">Save</button>
+            </div>
+            <div class="setting-status" id="notifyStatus"></div>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Test notifications</div>
+            <div class="setting-desc">Fires a sample alert through every enabled channel right now.</div>
+          </div>
+          <button class="toplink" onclick="testNotify()">🔔 Test</button>
+        </div>
       </div>
-      <div class="settings-foot">AI HQ · Claude Code Control Panel</div>
+      <div class="settings-foot">AgentQuest · mission control for your AI agents</div>
     </div>
   </div>
 
   <div id="alertbar" class="alertbar" style="display:none"></div>
+
+  <div class="filterbar" id="filterbar">
+    <span class="filter-label">Show</span>
+    <button class="fchip" data-bucket="working">⚡ Working</button>
+    <button class="fchip" data-bucket="waiting">⏳ Waiting</button>
+    <button class="fchip" data-bucket="idle">💤 Idle</button>
+    <span class="filter-count" id="filterCount"></span>
+    <button class="fchip archive" id="archiveOldBtn" title="Clear idle/ended sessions inactive for 30+ min. They're kept in History.">📦 Archive old</button>
+  </div>
 
   <div id="grid" class="grid"></div>
   <div id="toast" class="toast"></div>
@@ -357,9 +426,36 @@
   }
 
   // ---- Settings modal + "Start with Windows" ----
+  function setNotifyStatus(msg, cls) {
+    const el = document.getElementById('notifyStatus');
+    if (el) { el.textContent = msg || ''; el.className = 'setting-status ' + (cls || ''); }
+  }
+  function refreshNotify() {
+    fetch('/notify-config').then(r => r.json()).then(c => {
+      const t = document.getElementById('toastToggle'); if (t) t.checked = !!c.toast;
+      const st = document.getElementById('stopsToggle'); if (st) st.checked = !!c.stops;
+      const n = document.getElementById('ntfyTopic'); if (n && !n.matches(':focus')) n.value = c.ntfyTopic || '';
+      const extras = [c.hasTelegram && 'Telegram', c.hasWebhook && 'webhook'].filter(Boolean).join(' + ');
+      setNotifyStatus(extras ? `Also configured: ${extras} (via config.json)` : '', '');
+    }).catch(() => setNotifyStatus('Server unreachable.', 'err'));
+  }
+  function saveNotify(patch) {
+    fetch('/notify-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+      .then(r => r.json())
+      .then(d => { setNotifyStatus(d.ok ? 'Saved.' : 'Save failed.', d.ok ? 'ok' : 'err'); if (d.ok) setTimeout(refreshNotify, 400); })
+      .catch(() => setNotifyStatus('Save failed.', 'err'));
+  }
+  function testNotify() {
+    setNotifyStatus('Sending…', '');
+    fetch('/notify-test', { method: 'POST' }).then(r => r.json()).then(d => {
+      const on = Object.entries(d.channels || {}).filter(([, v]) => v).map(([k]) => k).join(', ');
+      setNotifyStatus(on ? `Sent via: ${on}` : 'No channels enabled.', on ? 'ok' : 'err');
+    }).catch(() => setNotifyStatus('Test failed.', 'err'));
+  }
   function openSettings() {
     document.getElementById('settingsOverlay').classList.add('open');
     refreshAutostart();
+    refreshNotify();
     if (window.matchMedia('(display-mode: standalone)').matches) {
       const btn = document.getElementById('installBtn');
       if (btn) { btn.disabled = true; btn.textContent = 'Installed'; }
@@ -400,9 +496,43 @@
     } finally { input.disabled = false; }
   }
 
+  // Running inside the AgentQuest shell? Then nav links switch tabs (no reload),
+  // the avatar jump posts to the shell, and title/badge updates are forwarded.
+  const EMBEDDED = window.parent !== window;
+  function setTitle(text) {
+    document.title = text;
+    if (EMBEDDED) { try { parent.postMessage({ type: 'title', text }, location.origin); } catch {} }
+  }
+  if (EMBEDDED) {
+    const MAP = { '/': 'rpg', '/history': 'history', '/rpg': 'rpg' };
+    document.querySelectorAll('a.toplink[href]').forEach(a => {
+      const view = MAP[a.getAttribute('href')];
+      if (!view) return;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        parent.postMessage({ type: 'nav', view }, location.origin);
+      });
+    });
+  }
+
   let sessions = [];
   let roleList = ['Software Engineer'];
   fetch('/roles').then(r => r.json()).then(d => { if (d.roles) roleList = d.roles; }).catch(()=>{});
+
+  // median response time today (how fast you answer waiting agents)
+  function refreshRespStat() {
+    fetch('/responses').then(r => r.json()).then(rows => {
+      const today = new Date().toDateString();
+      const answered = rows.filter(r => ['reply', 'resumed', 'focus'].includes(r.via) && new Date(r.respondedAt).toDateString() === today);
+      const el = document.getElementById('s-resp');
+      if (!el) return;
+      if (!answered.length) { el.textContent = '—'; return; }
+      const ms = answered.map(r => r.waitedMs).sort((a, b) => a - b);
+      el.textContent = durShort(ms[Math.floor(ms.length / 2)]);
+    }).catch(() => {});
+  }
+  refreshRespStat();
+  setInterval(refreshRespStat, 60000);
 
   function fmt(n) {
     if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
@@ -432,11 +562,36 @@
     if (m) return `${m}m ${s}s`;
     return `${s}s`;
   }
+  function waitedFor(sinceISO) {
+    if (!sinceISO) return '';
+    let s = Math.max(0, Math.floor((Date.now() - new Date(sinceISO).getTime()) / 1000));
+    const h = Math.floor(s/3600); const m = Math.floor((s - h*3600)/60);
+    if (h) return `waiting ${h}h ${m}m`;
+    if (m) return `waiting ${m}m`;
+    return `waiting ${s}s`;
+  }
+  function durShort(ms) {
+    const s = Math.max(0, Math.round(ms / 1000));
+    if (s >= 3600) return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+    if (s >= 60) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+    return s + 's';
+  }
+
+  // ---- status filter ----
+  const STATUS_BUCKETS = ['working', 'waiting', 'idle'];
+  function bucketOf(s) {
+    if (s.needsAttention) return 'waiting';
+    if (['working', 'thinking', 'starting'].includes(s.state)) return 'working';
+    return 'idle'; // idle + ended
+  }
+  function enabledBuckets() {
+    try { const v = JSON.parse(localStorage.getItem('aihq-filter')); if (Array.isArray(v)) return new Set(v); } catch {}
+    return new Set(STATUS_BUCKETS);
+  }
 
   function render() {
     const grid = document.getElementById('grid');
     const empty = document.getElementById('empty');
-    empty.style.display = sessions.length ? 'none' : 'block';
 
     let totTok = 0, totCost = 0, totLabor = 0, active = 0;
     for (const s of sessions) {
@@ -459,6 +614,20 @@
     const sorted = [...sessions].sort((a,b) =>
       prio(a) - prio(b) || new Date(b.lastActivity) - new Date(a.lastActivity));
 
+    // apply status filter
+    const enabled = enabledBuckets();
+    const visible = sorted.filter(s => enabled.has(bucketOf(s)));
+    const fc = document.getElementById('filterCount');
+    if (fc) fc.textContent = visible.length === sessions.length ? '' : `${visible.length} of ${sessions.length} shown`;
+    if (!visible.length) {
+      empty.style.display = 'block';
+      empty.innerHTML = sessions.length
+        ? '<h2>Nothing matches the filter</h2><p>Toggle a status chip above to show more sessions.</p>'
+        : '<h2>No sessions yet</h2><p>Start a Claude Code session in any IDE — it will appear here automatically.</p>';
+    } else {
+      empty.style.display = 'none';
+    }
+
     // Group sessions that belong to the same workspace (host+ide+cwd). Several
     // Claude Code sessions spawned by one IDE window show up as separate cards;
     // collapse them into one expandable "team" card. Toggle with the Group button.
@@ -466,7 +635,7 @@
     let items;
     if (groupOn) {
       const map = new Map();
-      for (const s of sorted) {
+      for (const s of visible) {
         const k = groupKey(s);
         if (!map.has(k)) map.set(k, []);
         map.get(k).push(s);
@@ -479,7 +648,7 @@
         : Math.max(...it.members.map(m => new Date(m.lastActivity)));
       items.sort((a,b) => itemPrio(a) - itemPrio(b) || itemTime(b) - itemTime(a));
     } else {
-      items = sorted.map(s => ({ type:'single', s }));
+      items = visible.map(s => ({ type:'single', s }));
     }
 
     grid.innerHTML = items.map(it => it.type === 'team' ? teamCardHTML(it.members) : cardHTML(it.s)).join('');
@@ -515,9 +684,28 @@
     grid.querySelectorAll('.focusbtn').forEach(el => {
       el.onclick = (e) => { e.stopPropagation(); focusSession(el.dataset.focus); };
     });
+
+    // open folder in OS explorer (stopPropagation so it doesn't focus the card / toggle the team)
+    grid.querySelectorAll('.path[data-open], .team-sub[data-open]').forEach(el => {
+      el.onclick = (e) => { e.stopPropagation(); openFolder(el.dataset.open); };
+    });
+
+    // avatar → jump to this agent in the quest world (instant tab switch in the shell)
+    grid.querySelectorAll('.avatar[data-office]').forEach(el => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        if (EMBEDDED) parent.postMessage({ type: 'show-agent', id: el.dataset.office }, location.origin);
+        else location.href = '/?agent=' + encodeURIComponent(el.dataset.office);
+      };
+    });
+    // pending-question preview → expand/collapse (never triggers card focus)
+    grid.querySelectorAll('.question').forEach(el => {
+      el.onclick = (e) => { e.stopPropagation(); el.classList.toggle('expanded'); };
+    });
+
     grid.querySelectorAll('.card').forEach(card => {
       card.onclick = (e) => {
-        if (e.target.closest('.name, .rolesel, .info, .tipbox, .focusbtn')) return;
+        if (e.target.closest('.name, .rolesel, .info, .tipbox, .focusbtn, .question')) return;
         const id = card.querySelector('.focusbtn');
         if (id) focusSession(id.dataset.focus);
       };
@@ -541,6 +729,14 @@
       .then(r => r.json())
       .then(d => { if (!d.ok) toast(`Couldn't focus: ${d.reason || d.result || 'unknown'}`, true); })
       .catch(() => toast('Focus request failed', true));
+  }
+
+  function openFolder(id) {
+    fetch('/open-folder', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ sessionId: id }) })
+      .then(r => r.json())
+      .then(d => toast(d.ok ? 'Opened folder' : `Couldn't open folder: ${d.reason || 'error'}`, !d.ok))
+      .catch(() => toast('Open folder failed', true));
   }
 
   // Workspace identity: same machine + IDE + folder => same "team".
@@ -571,7 +767,7 @@
           <div class="team-avatars">${avatars}${more}</div>
           <div class="team-info">
             <div class="team-name">${esc(proj)} <span class="team-badge">${members.length} agents</span> ${stateBadge}</div>
-            <div class="team-sub">${ideIcon(first.ide)} · ${esc(first.cwd)}</div>
+            <div class="team-sub openable" data-open="${first.sessionId}" title="Open folder: ${esc(first.cwd)}">${ideIcon(first.ide)} · 📂 ${esc(first.cwd)}</div>
           </div>
           <div class="team-metrics">
             <div><div class="tv">${fmt(tok)}</div><div class="tl">Tokens</div></div>
@@ -593,12 +789,19 @@
     const cachePct = ((tok.cacheCreation+tok.cacheRead)/total*100)||0;
     const p = s.persona || { name: s.name, color: '#5b8cff', initial: (s.name||'?')[0] };
     const stateChip = s.needsAttention
-      ? `<div class="waitbadge">⏳ ${esc(s.attentionReason || 'Waiting for you')}</div>`
+      ? `<div class="waitbadge">⏳ ${esc(s.attentionReason || 'Waiting for you')}${s.waitingSince ? ` · <span data-waiting="${s.waitingSince}">${waitedFor(s.waitingSince)}</span>` : ''}</div>`
       : `<div class="state"><span class="pulse"></span>${s.state}</div>`;
+    // the agent's actual question/summary, shown while it waits for you
+    const question = s.needsAttention && s.lastMessage
+      ? `<div class="question" data-qq="1" title="click to expand">
+           <div class="q-label">💬 The agent says:</div>
+           <div class="q-text">${esc(s.lastMessage)}</div>
+         </div>`
+      : '';
     return `
       <div class="card ${s.state} ${s.needsAttention ? 'attention' : ''}">
         <div class="row">
-          <div class="avatar" style="background:${p.color}">${esc(p.initial)}</div>
+          <div class="avatar office-link" data-office="${s.sessionId}" style="background:${p.color}" title="View ${esc(s.name || p.name)} in the quest world">${esc(p.initial)}</div>
           <div class="idblock">
             <div class="name" data-id="${s.sessionId}" title="click to rename">${esc(s.name || p.name)}</div>
             <div class="activity">${esc(s.activity || 'Working')}</div>
@@ -614,6 +817,7 @@
           ${s.toolCount ? `<span class="badge tool">🔧 ${s.toolCount} tools</span>` : ''}
           ${roleSelect(s)}
         </div>
+        ${question}
         ${s.task ? `<div class="task" title="${esc(s.task)}">🎯 ${esc(s.task)}</div>` : ''}
         <div class="metrics">
           <div class="metric"><div class="mv" data-uptime="${s.startTime}">${uptime(s.startTime)}</div><div class="ml">Uptime</div></div>
@@ -641,7 +845,7 @@
           <span class="o">Out ${fmt(tok.output)}</span>
           <span class="c">Cache ${fmt((tok.cacheCreation||0)+(tok.cacheRead||0))}</span>
         </div>
-        <div class="path" title="${esc(s.cwd)}">${esc(s.cwd)}</div>
+        <div class="path openable" data-open="${s.sessionId}" title="Open folder: ${esc(s.cwd)}">📂 ${esc(s.cwd)}</div>
       </div>`;
   }
 
@@ -661,6 +865,39 @@
     paintGroup(); render();
   };
   paintGroup();
+
+  // status filter chips
+  function paintFilters() {
+    const en = enabledBuckets();
+    document.querySelectorAll('.fchip[data-bucket]').forEach(c => {
+      const on = en.has(c.dataset.bucket);
+      c.classList.toggle('on', on);
+      c.classList.toggle('off', !on);
+    });
+  }
+  document.querySelectorAll('.fchip[data-bucket]').forEach(c => {
+    c.onclick = () => {
+      const en = enabledBuckets();
+      const b = c.dataset.bucket;
+      if (en.has(b)) en.delete(b); else en.add(b);
+      localStorage.setItem('aihq-filter', JSON.stringify([...en]));
+      paintFilters(); render();
+    };
+  });
+  paintFilters();
+
+  // "Archive old" — clear idle/ended sessions inactive for 30+ min (kept in History)
+  document.getElementById('archiveOldBtn').onclick = () => {
+    const cutoff = Date.now() - 30 * 60 * 1000;
+    const old = sessions.filter(s => bucketOf(s) === 'idle' && new Date(s.lastActivity).getTime() < cutoff);
+    if (!old.length) { toast('No idle sessions older than 30 min'); return; }
+    if (!confirm(`Archive ${old.length} idle session${old.length > 1 ? 's' : ''}? They'll be cleared from the board but kept in History.`)) return;
+    Promise.all(old.map(s => fetch('/clear', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: s.sessionId }),
+    }))).then(() => toast(`Archived ${old.length} session${old.length > 1 ? 's' : ''} → History`))
+      .catch(() => toast('Archive failed', true));
+  };
 
   // request OS notification permission up front
   if ('Notification' in window && Notification.permission === 'default') {
@@ -693,13 +930,13 @@
     if (!waiting.length) {
       bar.style.display = 'none';
       prevWaiting = new Set();
-      document.title = 'AI HQ — Control Panel';
+      setTitle('AgentQuest — Control Panel');
       return;
     }
     const who = waiting.map(s => `${esc(s.name)} (${esc(s.attentionReason || 'waiting')})`).join(' · ');
     bar.innerHTML = `<span class="bell">🔔</span> <span>${waiting.length} agent${waiting.length>1?'s':''} waiting for you</span> <span class="who">${who}</span>`;
     bar.style.display = 'flex';
-    document.title = `(${waiting.length}) ⏳ AI HQ`;
+    setTitle(`(${waiting.length}) ⏳ AgentQuest`);
 
     // fire chime + OS notification only for NEW waiters
     const now = new Set(waiting.map(s => s.sessionId));
@@ -749,10 +986,13 @@
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-  // Live uptime tick without full re-render
+  // Live uptime + waiting-timer tick without full re-render
   setInterval(() => {
     document.querySelectorAll('[data-uptime]').forEach(el => {
       el.textContent = uptime(el.dataset.uptime);
+    });
+    document.querySelectorAll('[data-waiting]').forEach(el => {
+      el.textContent = waitedFor(el.dataset.waiting);
     });
   }, 1000);
 

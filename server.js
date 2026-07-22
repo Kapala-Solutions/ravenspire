@@ -28,6 +28,22 @@ let CONFIG = { port: 3456, staleMinutes: 15, abandonMinutes: 45, autoStart: true
 try {
   CONFIG = { ...CONFIG, ...JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')) };
 } catch { /* defaults */ }
+// Server-side notifications (reach the user even with no browser tab open).
+// toast: native Windows toast · stops: also alert on turn-end ("your turn")
+// ntfyTopic/telegram*/webhookUrl: phone push channels · remindMinutes: nag once
+CONFIG.notify = {
+  toast: true, stops: true, remindMinutes: 10,
+  ntfyTopic: '', telegramToken: '', telegramChatId: '', webhookUrl: '',
+  ...(CONFIG.notify || {}),
+};
+
+function saveConfig() {
+  try {
+    fs.writeFileSync(path.join(__dirname, 'config.json'), JSON.stringify(CONFIG, null, 2));
+  } catch (e) {
+    console.error('[Config] save failed:', e.message);
+  }
+}
 
 const PORT = process.env.PORT || CONFIG.port || 3456;
 const STATE_FILE = path.join(__dirname, 'sessions.json');
@@ -36,6 +52,8 @@ const HISTORY_HEADER = 'timestamp,sessions,active,waiting,tokens,api_cost_usd,la
 // Durable per-session archive (JSON Lines). Every finished/cleared session is
 // appended here so its stats survive after the live card is removed.
 const SESSION_HISTORY_FILE = path.join(__dirname, 'sessions-history.jsonl');
+// Durable wait->response log (JSON Lines): one row per resolved "needs you" alert.
+const RESPONSES_FILE = path.join(__dirname, 'responses.jsonl');
 
 // ---------------------------------------------------------------------------
 // Session store (authoritative). Map: sessionId -> session object.
@@ -90,6 +108,79 @@ function appendHistory(reason) {
 }
 setInterval(() => appendHistory('tick'), 60000);
 
+// ---------------------------------------------------------------------------
+// Server-side notifications: native Windows toast + optional phone push.
+// These fire from the server so alerts reach the user with no browser open.
+// ---------------------------------------------------------------------------
+function sendToast(title, body) {
+  if (!CONFIG.notify.toast || process.platform !== 'win32') return;
+  const script = path.join(__dirname, 'notify.ps1');
+  execFile('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script, '-Title', title, '-Body', body],
+    { timeout: 8000 }, () => {});
+}
+
+// Minimal dependency-free HTTP(S) POST (fire and forget).
+function postHTTP(urlStr, headers, bodyStr) {
+  try {
+    const u = new URL(urlStr);
+    const mod = u.protocol === 'https:' ? require('https') : require('http');
+    const req = mod.request(u, { method: 'POST', headers }, (res) => res.resume());
+    req.on('error', () => {});
+    req.end(bodyStr);
+  } catch { /* bad url — ignore */ }
+}
+
+function sendPush(title, body) {
+  const n = CONFIG.notify;
+  if (n.ntfyTopic) {
+    // ntfy.sh: free push to iOS/Android; header values must be ASCII
+    postHTTP(`https://ntfy.sh/${encodeURIComponent(n.ntfyTopic)}`,
+      { 'Content-Type': 'text/plain', 'Title': title.replace(/[^\x20-\x7E]/g, '').trim() || 'AgentQuest', 'Tags': 'bell' },
+      body);
+  }
+  if (n.telegramToken && n.telegramChatId) {
+    postHTTP(`https://api.telegram.org/bot${n.telegramToken}/sendMessage`,
+      { 'Content-Type': 'application/json' },
+      JSON.stringify({ chat_id: n.telegramChatId, text: `${title}\n${body}` }));
+  }
+  if (n.webhookUrl) {
+    postHTTP(n.webhookUrl, { 'Content-Type': 'application/json' }, JSON.stringify({ app: 'ai-hq', title, body }));
+  }
+}
+
+function notifyAlert(s, kind) {
+  const title = kind === 'remind' ? `⏳ Still waiting: ${s.name}` : `🔔 ${s.name} needs you`;
+  const body = `${s.attentionReason || 'Waiting for input'} · ${s.title || ''}`;
+  sendToast(title, body);
+  sendPush(title, body);
+}
+
+// ---------------------------------------------------------------------------
+// Response-time tracking: how long an agent waited before the user acted.
+// One durable JSONL row per resolved alert; via tells HOW it resolved:
+//   reply (user prompt) · resumed (tool/permission approved) · focus (card click)
+//   abandoned (alert timed out) · ended (session ended while waiting)
+// ---------------------------------------------------------------------------
+const recentResponses = [];
+function recordResponse(s, via) {
+  if (!s || !s.needsAttention || !s.waitingSince) return;
+  const waitedMs = Date.now() - new Date(s.waitingSince).getTime();
+  if (!(waitedMs > 500)) return; // sub-second flaps are noise
+  const rec = {
+    sessionId: s.sessionId,
+    name: s.name || (s.persona && s.persona.name) || null,
+    project: s.title || null,
+    reason: s.attentionReason || null,
+    waitingSince: s.waitingSince,
+    respondedAt: new Date().toISOString(),
+    waitedMs,
+    via,
+  };
+  try { fs.appendFileSync(RESPONSES_FILE, JSON.stringify(rec) + '\n'); } catch (e) { console.error('[Responses] write failed:', e.message); }
+  recentResponses.unshift(rec);
+  if (recentResponses.length > 200) recentResponses.pop();
+}
+
 // Common per-session fields used by both the durable archive and the live merge.
 function sessionSnapshot(s) {
   return {
@@ -113,6 +204,7 @@ function sessionSnapshot(s) {
     messages: s.messages || 0,
     toolCount: s.toolCount || 0,
     toolBreakdown: s.toolBreakdown || {},
+    lastMessage: s.lastMessage || null,
   };
 }
 
@@ -143,8 +235,16 @@ setInterval(() => {
       s.activity = 'Idle';
       changed = true;
     }
+    // still waiting after remindMinutes — nag the human once
+    if (s.needsAttention && !s.reminded && s.waitingSince && CONFIG.notify.remindMinutes > 0 &&
+        now - new Date(s.waitingSince).getTime() > CONFIG.notify.remindMinutes * 60000) {
+      s.reminded = true;
+      notifyAlert(s, 'remind');
+      changed = true;
+    }
     // clearly abandoned — drop the alert so the banner isn't stuck
     if (s.needsAttention && idleMs > CONFIG.abandonMinutes * 60000) {
+      recordResponse(s, 'abandoned');
       s.needsAttention = false;
       s.attentionReason = null;
       changed = true;
@@ -242,26 +342,42 @@ function upsertSession(ev) {
 
   // "Needs you" attention flag
   const evtName = (ev.hookEvent || ev.type || '').toLowerCase();
+  const wasAttention = s.needsAttention;
   if (evtName.includes('notification')) {
     s.needsAttention = true;
     s.attentionReason = ev.message ? String(ev.message).slice(0, 80) : 'Needs your input';
-    s.waitingSince = now;
+    if (!wasAttention) s.waitingSince = now;
   } else if (evtName === 'stop' || evtName.includes('stop')) {
     s.needsAttention = true;
     s.attentionReason = 'Finished — your turn';
-    s.waitingSince = now;
+    if (!wasAttention) s.waitingSince = now;
   } else if (
     evtName.includes('userpromptsubmit') || evtName.includes('pretooluse') ||
     evtName.includes('posttooluse') || evtName.includes('sessionstart') ||
     ev.type === 'tool_start' || ev.type === 'tool_end'
   ) {
-    // agent is active again — clear the alert
+    // agent is active again — the user responded; record how long it waited
+    if (wasAttention) recordResponse(s, evtName.includes('userpromptsubmit') ? 'reply' : 'resumed');
     s.needsAttention = false;
     s.attentionReason = null;
     s.waitingSince = null;
+    s.reminded = false;
   } else if (evtName.includes('sessionend')) {
+    if (wasAttention) recordResponse(s, 'ended');
     s.needsAttention = false;
     s.attentionReason = null;
+  }
+  // Alert just rose: push it to the human (toast + phone). Stop events ("your
+  // turn") are gated by notify.stops; explicit Notifications always fire.
+  // A per-session 45s dedupe stops rapid re-fires from chatty hooks.
+  if (s.needsAttention && !wasAttention) {
+    s.reminded = false;
+    const isStop = evtName === 'stop' || evtName.includes('stop');
+    const wantPush = isStop ? CONFIG.notify.stops !== false : true;
+    if (wantPush && (!s.lastNotifyAt || Date.now() - s.lastNotifyAt > 45000)) {
+      s.lastNotifyAt = Date.now();
+      notifyAlert(s, 'alert');
+    }
   }
 
   const isPre = (ev.hookEvent || ev.type || '').toLowerCase().includes('pretooluse') || ev.type === 'tool_start';
@@ -298,6 +414,7 @@ function upsertSession(ev) {
     }
     if (t.messages) s.messages = t.messages;
     if (t.firstPrompt) s.task = t.firstPrompt; // what this session is about
+    if (t.lastAssistantText) s.lastMessage = t.lastAssistantText; // the agent's latest words (the question, when waiting)
     // Transcript timestamps give the most accurate (and retroactive) active time
     if (t.activeMs && t.activeMs > s.activeMs) s.activeMs = t.activeMs;
   }
@@ -377,7 +494,7 @@ const server = http.createServer((req, res) => {
       if (!s) return reply({ ok: false, reason: 'unknown session' });
       if (s.host && s.host.toLowerCase() !== os.hostname().toLowerCase()) return reply({ ok: false, reason: `runs on ${s.host}, not this machine` });
       // Clicking a session = acknowledging it; clear the alert.
-      if (s.needsAttention) { s.needsAttention = false; s.attentionReason = null; saveState(); broadcast(); }
+      if (s.needsAttention) { recordResponse(s, 'focus'); s.needsAttention = false; s.attentionReason = null; s.waitingSince = null; saveState(); broadcast(); }
 
       // Claude Desktop: open the exact session/conversation via deep link
       // (claude://resume?session=<uuid> -> importCliSession). Better than window focus.
@@ -396,6 +513,27 @@ const server = http.createServer((req, res) => {
           const out = (stdout || '').trim();
           reply({ ok: !err && out === 'focused', result: out || (err && err.message) });
         });
+    });
+    return;
+  }
+
+  // Open a session's working directory in the OS file explorer: POST /open-folder {sessionId}
+  // Path comes from the stored session (never a client-supplied path) and must be a real dir.
+  if (req.method === 'POST' && req.url === '/open-folder') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      const reply = (obj, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
+      let s;
+      try { s = sessions.get(JSON.parse(body).sessionId); } catch {}
+      if (!s) return reply({ ok: false, reason: 'unknown session' });
+      if (s.host && s.host.toLowerCase() !== os.hostname().toLowerCase()) return reply({ ok: false, reason: `runs on ${s.host}, not this machine` });
+      const dir = s.cwd;
+      if (!dir || !fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return reply({ ok: false, reason: 'folder not found on this machine' });
+      const opener = process.platform === 'win32' ? 'explorer' : (process.platform === 'darwin' ? 'open' : 'xdg-open');
+      // explorer.exe returns a non-zero exit code even on success, so don't treat that as failure.
+      execFile(opener, [dir], { timeout: 4000 }, () => {});
+      reply({ ok: true, path: dir });
     });
     return;
   }
@@ -525,12 +663,14 @@ const server = http.createServer((req, res) => {
     const startupDir = process.env.APPDATA
       ? path.join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
       : path.join(os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
-    const lnk = path.join(startupDir, 'AI HQ.lnk');
+    const lnk = path.join(startupDir, 'AgentQuest.lnk');
+    const legacyLnk = path.join(startupDir, 'AI HQ.lnk'); // pre-rename installs
+    const isEnabled = () => fs.existsSync(lnk) || fs.existsSync(legacyLnk);
     const reply = (obj, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
 
     if (req.method === 'GET') {
       if (process.platform !== 'win32') return reply({ ok: true, supported: false, enabled: false });
-      return reply({ ok: true, supported: true, enabled: fs.existsSync(lnk) });
+      return reply({ ok: true, supported: true, enabled: isEnabled() });
     }
     if (req.method === 'POST') {
       if (process.platform !== 'win32') return reply({ ok: false, supported: false, reason: 'Windows only' }, 400);
@@ -542,12 +682,74 @@ const server = http.createServer((req, res) => {
         const script = path.join(__dirname, enabled ? 'install-autostart.ps1' : 'uninstall-autostart.ps1');
         execFile('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script],
           { timeout: 15000 }, (err, stdout, stderr) => {
-            if (err) return reply({ ok: false, enabled: fs.existsSync(lnk), error: (stderr || err.message || '').trim() }, 500);
-            reply({ ok: true, enabled: fs.existsSync(lnk), result: (stdout || '').trim() });
+            if (err) return reply({ ok: false, enabled: isEnabled(), error: (stderr || err.message || '').trim() }, 500);
+            reply({ ok: true, enabled: isEnabled(), result: (stdout || '').trim() });
           });
       });
       return;
     }
+  }
+
+  // Wait->response analytics: durable log rows, newest first (last 1000)
+  if (req.url === '/responses') {
+    fs.readFile(RESPONSES_FILE, 'utf8', (err, data) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      if (err) return res.end('[]');
+      const rows = [];
+      const lines = data.split('\n');
+      for (let i = lines.length - 1; i >= 0 && rows.length < 1000; i--) {
+        if (!lines[i].trim()) continue;
+        try { rows.push(JSON.parse(lines[i])); } catch { /* skip malformed */ }
+      }
+      res.end(JSON.stringify(rows));
+    });
+    return;
+  }
+
+  // Notification settings (secrets stay server-side; only presence is reported)
+  if (req.url === '/notify-config') {
+    const reply = (obj, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
+    if (req.method === 'GET') {
+      const n = CONFIG.notify;
+      return reply({
+        ok: true, toast: n.toast !== false, stops: n.stops !== false,
+        remindMinutes: n.remindMinutes, ntfyTopic: n.ntfyTopic || '',
+        hasTelegram: !!(n.telegramToken && n.telegramChatId), hasWebhook: !!n.webhookUrl,
+      });
+    }
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', () => {
+        try {
+          const b = JSON.parse(body);
+          if (typeof b.toast === 'boolean') CONFIG.notify.toast = b.toast;
+          if (typeof b.stops === 'boolean') CONFIG.notify.stops = b.stops;
+          if (typeof b.ntfyTopic === 'string') CONFIG.notify.ntfyTopic = b.ntfyTopic.trim();
+          if (Number.isFinite(+b.remindMinutes)) CONFIG.notify.remindMinutes = Math.max(0, +b.remindMinutes);
+          saveConfig();
+          reply({ ok: true });
+        } catch { reply({ ok: false, reason: 'bad json' }, 400); }
+      });
+      return;
+    }
+  }
+
+  // Fire a test notification through every configured channel
+  if (req.method === 'POST' && req.url === '/notify-test') {
+    sendToast('🔔 AgentQuest test', 'Server notifications are working.');
+    sendPush('🔔 AgentQuest test', 'Server notifications are working.');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      ok: true,
+      channels: {
+        toast: CONFIG.notify.toast !== false && process.platform === 'win32',
+        ntfy: !!CONFIG.notify.ntfyTopic,
+        telegram: !!(CONFIG.notify.telegramToken && CONFIG.notify.telegramChatId),
+        webhook: !!CONFIG.notify.webhookUrl,
+      },
+    }));
+    return;
   }
 
   // Event endpoint — hooks POST here
@@ -585,9 +787,10 @@ const server = http.createServer((req, res) => {
 
   // Static files
   let urlPath = req.url.split('?')[0];
-  if (urlPath === '/') urlPath = '/index.html';
+  if (urlPath === '/') urlPath = '/app.html';                 // shell: keeps all views mounted
   else if (urlPath === '/dashboard' || urlPath === '/dashboard/') urlPath = '/dashboard.html';
   else if (urlPath === '/history' || urlPath === '/history/') urlPath = '/history.html';
+  else if (urlPath === '/rpg' || urlPath === '/rpg/' || urlPath === '/game') urlPath = '/rpg.html';
   let filePath = path.join(__dirname, urlPath);
   const ext = path.extname(filePath);
   const contentTypes = {
@@ -623,15 +826,15 @@ server.listen(PORT, '0.0.0.0', () => {
   }
   console.log(`
 +--------------------------------------------------+
-|                AI HQ SERVER v2                   |
+|              ⚔  A G E N T Q U E S T  ⚔           |
 +--------------------------------------------------+
-  Office:     http://localhost:${PORT}
-  Dashboard:  http://localhost:${PORT}/dashboard
-  Network:    http://${localIP}:${PORT}
-  Sessions:   GET  http://localhost:${PORT}/sessions
-  Events:     POST http://localhost:${PORT}/event
+  Quest world:   http://localhost:${PORT}
+  Control panel: http://localhost:${PORT}/dashboard
+  History:       http://localhost:${PORT}/history
+  Network:       http://${localIP}:${PORT}
+  Events:        POST http://localhost:${PORT}/event
 
-Waiting for Claude Code events...`);
+The guild doors are open. Waiting for agents...`);
 });
 
 // Tail Claude Desktop's main.log to surface cowork / desktop-hosted sessions that

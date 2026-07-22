@@ -1,11 +1,11 @@
-// sw.js — AI HQ service worker.
+// sw.js — AgentQuest service worker.
 // Makes the control panel installable and resilient offline. Strategy:
 //   - Dynamic data (/sessions, /event, /history, /roles, /status, WebSocket): never cached.
 //   - App shell (HTML): network-first, fall back to cache when the server is down.
 //   - Static assets (icons, manifest, scripts): cache-first, refreshed in the background.
-const CACHE = 'aihq-v2';
+const CACHE = 'agentquest-v1';
 const SHELL = [
-  '/', '/index.html', '/dashboard.html', '/history.html',
+  '/', '/dashboard', '/history', '/rpg',
   '/manifest.webmanifest',
   '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon-32.png',
 ];
@@ -13,7 +13,7 @@ const SHELL = [
 // Data/control endpoints that must always hit the network (never cached).
 // NB: '/history' (no suffix) is the HTML page, handled by the navigation branch —
 // only the data routes '/history.csv' and '/history/sessions' are bypassed here.
-const BYPASS = ['/sessions', '/event', '/history.csv', '/history/sessions', '/roles', '/status', '/debug', '/focus', '/role', '/rename', '/clear', '/restart', '/autostart'];
+const BYPASS = ['/sessions', '/event', '/history.csv', '/history/sessions', '/responses', '/notify-config', '/notify-test', '/roles', '/status', '/debug', '/focus', '/open-folder', '/role', '/rename', '/clear', '/restart', '/autostart'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -40,7 +40,7 @@ self.addEventListener('fetch', (e) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(req, copy));
         return res;
-      }).catch(() => caches.match(req).then((r) => r || caches.match('/index.html')))
+      }).catch(() => caches.match(req).then((r) => r || caches.match('/')))
     );
     return;
   }

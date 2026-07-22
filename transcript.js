@@ -67,6 +67,17 @@ function extractPromptText(entry) {
   return null;
 }
 
+// User-facing text of an assistant message (joins text blocks, skips tool_use).
+function extractAssistantText(msg) {
+  const c = msg && msg.content;
+  if (typeof c === 'string') return c.trim();
+  if (Array.isArray(c)) {
+    const t = c.filter((b) => b && b.type === 'text' && b.text).map((b) => String(b.text));
+    if (t.length) return t.join('\n').trim();
+  }
+  return null;
+}
+
 function parseTranscript(transcriptPath) {
   const empty = {
     tokens: { input: 0, output: 0, cacheCreation: 0, cacheRead: 0, total: 0 },
@@ -87,6 +98,7 @@ function parseTranscript(transcriptPath) {
   const tokens = { input: 0, output: 0, cacheCreation: 0, cacheRead: 0, total: 0 };
   let model = null;
   let firstPrompt = null;
+  let lastAssistantText = null;
   let messages = 0;
   let activeMs = 0;         // sum of gaps between entries, capped (active work time)
   let prevTs = null;
@@ -124,6 +136,11 @@ function parseTranscript(transcriptPath) {
     const msg = entry.message;
     if (msg && msg.role === 'assistant') {
       if (msg.model) model = msg.model;
+      // Keep the latest user-facing text. Done BEFORE the id dedupe: streaming
+      // repeats the same message id with progressively more complete content,
+      // and we want the final version.
+      const txt = extractAssistantText(msg);
+      if (txt) lastAssistantText = txt;
       const id = msg.id || entry.uuid;
       if (id && seen.has(id)) continue; // already counted this message
       if (id) seen.add(id);
@@ -146,6 +163,7 @@ function parseTranscript(transcriptPath) {
     costBreakdown: costBreakdown(tokens, model),
     model,
     firstPrompt: firstPrompt ? firstPrompt.slice(0, 80) : null,
+    lastAssistantText: lastAssistantText ? lastAssistantText.slice(0, 1500) : null,
     messages,
     activeMs,
   };
