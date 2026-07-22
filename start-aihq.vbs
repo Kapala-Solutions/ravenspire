@@ -1,4 +1,4 @@
-' start-aihq.vbs — launch the AI HQ server with no visible console window.
+' start-aihq.vbs — launch the Ravenspire server with no visible console window.
 ' Used by the Windows startup shortcut created by install-autostart.ps1.
 Dim sh, fso, here
 Set sh = CreateObject("WScript.Shell")

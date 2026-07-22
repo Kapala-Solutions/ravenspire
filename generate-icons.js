@@ -1,4 +1,4 @@
-// generate-icons.js — produces AI HQ app icons (PNG) from a single procedural
+// generate-icons.js — produces Ravenspire app icons (PNG) from a single procedural
 // design so the PWA / favicon assets are reproducible. Run: node generate-icons.js
 //
 // Outputs (in repo root):
@@ -52,7 +52,7 @@ function encodePNG(size, rgba) {
 }
 
 // --------------------------------------------------------------------------
-// Procedural icon: a dark HQ tower with lit windows (agents at work) and a
+// Procedural icon: a dark spire with lit windows (agents at work) and a
 // glowing signal beacon on top. Rendered at 4x supersample then box-averaged.
 // --------------------------------------------------------------------------
 const SS = 4;

@@ -135,7 +135,7 @@ function sendPush(title, body) {
   if (n.ntfyTopic) {
     // ntfy.sh: free push to iOS/Android; header values must be ASCII
     postHTTP(`https://ntfy.sh/${encodeURIComponent(n.ntfyTopic)}`,
-      { 'Content-Type': 'text/plain', 'Title': title.replace(/[^\x20-\x7E]/g, '').trim() || 'AgentQuest', 'Tags': 'bell' },
+      { 'Content-Type': 'text/plain', 'Title': title.replace(/[^\x20-\x7E]/g, '').trim() || 'Ravenspire', 'Tags': 'bell' },
       body);
   }
   if (n.telegramToken && n.telegramChatId) {
@@ -663,9 +663,10 @@ const server = http.createServer((req, res) => {
     const startupDir = process.env.APPDATA
       ? path.join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
       : path.join(os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
-    const lnk = path.join(startupDir, 'AgentQuest.lnk');
-    const legacyLnk = path.join(startupDir, 'AI HQ.lnk'); // pre-rename installs
-    const isEnabled = () => fs.existsSync(lnk) || fs.existsSync(legacyLnk);
+    const lnk = path.join(startupDir, 'Ravenspire.lnk');
+    // pre-rename installs (AI HQ → AgentQuest → Ravenspire)
+    const legacyLnks = ['AgentQuest.lnk', 'AI HQ.lnk'].map((n) => path.join(startupDir, n));
+    const isEnabled = () => fs.existsSync(lnk) || legacyLnks.some((p) => fs.existsSync(p));
     const reply = (obj, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
 
     if (req.method === 'GET') {
@@ -737,8 +738,8 @@ const server = http.createServer((req, res) => {
 
   // Fire a test notification through every configured channel
   if (req.method === 'POST' && req.url === '/notify-test') {
-    sendToast('🔔 AgentQuest test', 'Server notifications are working.');
-    sendPush('🔔 AgentQuest test', 'Server notifications are working.');
+    sendToast('🔔 Ravenspire test', 'Server notifications are working.');
+    sendPush('🔔 Ravenspire test', 'Server notifications are working.');
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       ok: true,

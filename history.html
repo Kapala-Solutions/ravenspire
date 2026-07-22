@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AgentQuest — History</title>
+<title>Ravenspire — History</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0b0e14">
-<meta name="application-name" content="AgentQuest">
+<meta name="application-name" content="Ravenspire">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="AgentQuest">
+<meta name="apple-mobile-web-app-title" content="Ravenspire">
 <style>
   :root {
     --bg: #0b0e14; --panel: #141925; --panel2: #1b2130; --border: #262d3d;
@@ -135,7 +135,7 @@
 </head>
 <body>
   <header>
-    <h1><span class="dot">●</span> ⚔ AgentQuest · History</h1>
+    <h1><span class="dot">●</span> 🐦‍⬛ Ravenspire · History</h1>
     <div class="spacer"></div>
     <button class="toplink" id="refreshBtn" onclick="loadAll()" title="Reload history">↻ Refresh</button>
         <a class="toplink" href="/dashboard">📊 Control Panel</a>
@@ -151,7 +151,7 @@
         <div class="setting-row">
           <div>
             <div class="setting-label">Start with Windows</div>
-            <div class="setting-desc">Launch AgentQuest automatically (hidden) when you log in to Windows.</div>
+            <div class="setting-desc">Launch Ravenspire automatically (hidden) when you log in to Windows.</div>
             <div class="setting-status" id="autostartStatus"></div>
           </div>
           <label class="switch"><input type="checkbox" id="autostartToggle" onchange="toggleAutostart(this)"><span class="slider"></span></label>
@@ -165,7 +165,7 @@
           <button class="toplink" id="installBtn" onclick="installApp()" disabled>Install</button>
         </div>
       </div>
-      <div class="settings-foot">AgentQuest · mission control for your AI agents</div>
+      <div class="settings-foot">Ravenspire · mission control for your AI agents</div>
     </div>
   </div>
 
@@ -207,7 +207,7 @@
   <div class="chart-tooltip" id="chartTip"></div>
 
 <script>
-  // Running inside the AgentQuest shell? Nav links switch tabs instead of reloading.
+  // Running inside the Ravenspire shell? Nav links switch tabs instead of reloading.
   (function() {
     if (window.parent === window) return;
     const MAP = { '/': 'rpg', '/dashboard': 'panel', '/history': 'history', '/rpg': 'rpg' };

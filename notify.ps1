@@ -2,7 +2,7 @@
 # Used by server.js so "needs you" alerts reach the user even with no browser open.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File notify.ps1 -Title "..." -Body "..."
 param(
-    [string]$Title = 'AgentQuest',
+    [string]$Title = 'Ravenspire',
     [string]$Body = ''
 )
 try {

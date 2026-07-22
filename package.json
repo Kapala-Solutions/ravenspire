@@ -1,5 +1,5 @@
 {
-  "name": "agentquest",
+  "name": "ravenspire",
   "version": "2.0.0",
   "description": "Mission control for your AI agents, as a JRPG — live quest world, control panel, cost & labor analytics, and native notifications for Claude Code sessions.",
   "main": "server.js",

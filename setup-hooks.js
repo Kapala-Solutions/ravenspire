@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// setup-hooks.js — one-command AgentQuest install: wires the Claude Code hooks
+// setup-hooks.js — one-command Ravenspire install: wires the Claude Code hooks
 // that feed the server into ~/.claude/settings.json.
 //
 //   npm run setup            merge hooks into ~/.claude/settings.json (with backup)
@@ -8,7 +8,7 @@
 //
 // Safe by design: creates a timestamped backup first, merges instead of
 // overwriting (your existing hooks are kept), and is idempotent — re-running
-// updates AgentQuest's entries in place.
+// updates Ravenspire's entries in place.
 
 const fs = require('fs');
 const os = require('os');
@@ -40,7 +40,7 @@ function isOurs(hookCmd) {
 
 function main() {
   if (!fs.existsSync(path.join(__dirname, 'send-event.ps1'))) {
-    console.error('send-event.ps1 not found next to this script — run from the AgentQuest folder.');
+    console.error('send-event.ps1 not found next to this script — run from the Ravenspire folder.');
     process.exit(1);
   }
 
@@ -70,7 +70,7 @@ function main() {
       changes.push(`${event}: added`);
       continue;
     }
-    // replace a previous AgentQuest entry, or append alongside the user's own hooks
+    // replace a previous Ravenspire entry, or append alongside the user's own hooks
     let replaced = false;
     for (const matcherBlock of existing) {
       const hooks = (matcherBlock && matcherBlock.hooks) || [];
@@ -85,14 +85,14 @@ function main() {
     else { existing.push(entry); changes.push(`${event}: added alongside your existing hooks`); }
   }
 
-  console.log(`AgentQuest hook setup → ${SETTINGS}\nServer: ${SERVER} · Script: ${SCRIPT}\n`);
+  console.log(`Ravenspire hook setup → ${SETTINGS}\nServer: ${SERVER} · Script: ${SCRIPT}\n`);
   for (const c of changes) console.log('  • ' + c);
 
   if (DRY) { console.log('\n--dry: nothing written.'); return; }
 
   fs.mkdirSync(path.dirname(SETTINGS), { recursive: true });
   if (existed) {
-    const backup = SETTINGS + '.bak-agentquest-' + Date.now();
+    const backup = SETTINGS + '.bak-ravenspire-' + Date.now();
     fs.copyFileSync(SETTINGS, backup);
     console.log(`\nBackup saved: ${backup}`);
   }

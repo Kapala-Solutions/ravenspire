@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AgentQuest</title>
+<title>Ravenspire</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0a0c12">
-<meta name="application-name" content="AgentQuest">
+<meta name="application-name" content="Ravenspire">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="AgentQuest">
+<meta name="apple-mobile-web-app-title" content="Ravenspire">
 <style>
   html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0a0c12; }
   iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
@@ -20,13 +20,13 @@
 </head>
 <body>
 <!--
-  AgentQuest shell — keeps every view mounted and live so switching between
+  Ravenspire shell — keeps every view mounted and live so switching between
   the quest world, control panel, and history is instant (no page reloads,
   WebSocket connections stay up, battles keep raging). The views are the
   standalone pages loaded in same-origin frames; their nav links detect
   they're embedded and ask the shell to switch instead of navigating.
 -->
-<iframe id="v-rpg" title="AgentQuest"></iframe>
+<iframe id="v-rpg" title="Ravenspire"></iframe>
 <iframe id="v-panel" class="hidden" title="Control Panel"></iframe>
 <iframe id="v-history" class="hidden" title="History"></iframe>
 
@@ -66,7 +66,7 @@
       try { frames.rpg.contentWindow.postMessage({ type: 'highlight-agent', id: e.data.id }, location.origin); } catch {}
     } else if (e.data.type === 'title' && typeof e.data.text === 'string') {
       // adopt only the waiting-count badge; otherwise keep the neutral app title
-      document.title = e.data.text.includes('⏳') ? e.data.text : 'AgentQuest';
+      document.title = e.data.text.includes('⏳') ? e.data.text : 'Ravenspire';
     }
   });
 

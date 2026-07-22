@@ -1,4 +1,4 @@
-# ⚔️ AgentQuest
+# 🐦‍⬛ Ravenspire
 
 **Mission control for your AI agents — as a JRPG.**
 
@@ -6,7 +6,7 @@ Every Claude Code session on your machine becomes a pixel-art **hero** in a livi
 
 Zero build. Zero frameworks. One `npm start`.
 
-![AgentQuest — the quest world](aihq-rpg.png)
+![Ravenspire — the quest world](ravenspire-rpg.png)
 
 ---
 
@@ -17,7 +17,7 @@ If you run many AI agents in parallel, you have two problems:
 1. **Awareness** — who's working, who's stuck, who's waiting on *you*, and what is all of it costing?
 2. **Caring** — dashboards are boring, so you stop looking at them.
 
-AgentQuest solves both: it's a real operations panel (cost, labor value, alerts, history, response-time analytics) wearing a 16-bit JRPG that makes you actually *want* to watch your agents work.
+Ravenspire solves both: it's a real operations panel (cost, labor value, alerts, history, response-time analytics) wearing a 16-bit JRPG that makes you actually *want* to watch your agents work.
 
 ## ✨ Features
 
@@ -36,8 +36,8 @@ AgentQuest solves both: it's a real operations panel (cost, labor value, alerts,
 
 ### Control panel & history
 
-![Control panel](aihq-dashboard.png)
-![History & response analytics](aihq-history.png)
+![Control panel](ravenspire-dashboard.png)
+![History & response analytics](ravenspire-history.png)
 
 ---
 
@@ -46,8 +46,8 @@ AgentQuest solves both: it's a real operations panel (cost, labor value, alerts,
 Requirements: **Node 18+**, and [Claude Code](https://claude.com/claude-code) (any surface: CLI, VS Code, Claude Desktop).
 
 ```bash
-git clone https://github.com/Kapala-Solutions/agentquest.git
-cd agentquest
+git clone https://github.com/Kapala-Solutions/ravenspire.git
+cd ravenspire
 npm install
 npm run setup     # wires the Claude Code hooks into ~/.claude/settings.json (backup + merge, idempotent)
 npm start

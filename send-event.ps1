@@ -1,4 +1,4 @@
-# send-event.ps1 — forward a Claude Code hook payload to the AI HQ server.
+# send-event.ps1 — forward a Claude Code hook payload to the Ravenspire server.
 #
 # Claude Code pipes the hook event as JSON on stdin. This script reads that
 # JSON, augments it with the real session id, cwd, transcript path, model IDE

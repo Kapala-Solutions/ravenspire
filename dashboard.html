@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AgentQuest — Control Panel</title>
+<title>Ravenspire — Control Panel</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0b0e14">
-<meta name="application-name" content="AgentQuest">
+<meta name="application-name" content="Ravenspire">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="AgentQuest">
+<meta name="apple-mobile-web-app-title" content="Ravenspire">
 <style>
   :root {
     --bg: #0b0e14;
@@ -298,7 +298,7 @@
 </head>
 <body>
   <header>
-    <h1><span class="dot">●</span> ⚔ AgentQuest · Control Panel</h1>
+    <h1><span class="dot">●</span> 🐦‍⬛ Ravenspire · Control Panel</h1>
     <div class="stats">
       <div class="stat"><div class="v" id="s-sessions">0</div><div class="l">Sessions</div></div>
       <div class="stat"><div class="v" id="s-active">0</div><div class="l">Active</div></div>
@@ -325,7 +325,7 @@
         <div class="setting-row">
           <div>
             <div class="setting-label">Start with Windows</div>
-            <div class="setting-desc">Launch AgentQuest automatically (hidden) when you log in to Windows.</div>
+            <div class="setting-desc">Launch Ravenspire automatically (hidden) when you log in to Windows.</div>
             <div class="setting-status" id="autostartStatus"></div>
           </div>
           <label class="switch">
@@ -374,7 +374,7 @@
           <button class="toplink" onclick="testNotify()">🔔 Test</button>
         </div>
       </div>
-      <div class="settings-foot">AgentQuest · mission control for your AI agents</div>
+      <div class="settings-foot">Ravenspire · mission control for your AI agents</div>
     </div>
   </div>
 
@@ -496,7 +496,7 @@
     } finally { input.disabled = false; }
   }
 
-  // Running inside the AgentQuest shell? Then nav links switch tabs (no reload),
+  // Running inside the Ravenspire shell? Then nav links switch tabs (no reload),
   // the avatar jump posts to the shell, and title/badge updates are forwarded.
   const EMBEDDED = window.parent !== window;
   function setTitle(text) {
@@ -930,13 +930,13 @@
     if (!waiting.length) {
       bar.style.display = 'none';
       prevWaiting = new Set();
-      setTitle('AgentQuest — Control Panel');
+      setTitle('Ravenspire — Control Panel');
       return;
     }
     const who = waiting.map(s => `${esc(s.name)} (${esc(s.attentionReason || 'waiting')})`).join(' · ');
     bar.innerHTML = `<span class="bell">🔔</span> <span>${waiting.length} agent${waiting.length>1?'s':''} waiting for you</span> <span class="who">${who}</span>`;
     bar.style.display = 'flex';
-    setTitle(`(${waiting.length}) ⏳ AgentQuest`);
+    setTitle(`(${waiting.length}) ⏳ Ravenspire`);
 
     // fire chime + OS notification only for NEW waiters
     const now = new Set(waiting.map(s => s.sessionId));
