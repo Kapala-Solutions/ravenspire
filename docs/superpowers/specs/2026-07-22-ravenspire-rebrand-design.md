@@ -103,15 +103,16 @@ Visual identity — matches the product's 16-bit night-time world:
 
 ## 5. Donations — "Buy me a beer" 🍺
 
-- **Platform:** Buy Me a Coffee, presented as "Buy me a beer".
-- **README:** badge in the top badge row + a Support section with the standard BMC button
-  image linking to `https://buymeacoffee.com/BMC_USERNAME_PLACEHOLDER`, and one line of
-  thanks copy in the project's voice ("Ravens fly on beer money.").
-- **`.github/FUNDING.yml`:** `buy_me_a_coffee: BMC_USERNAME_PLACEHOLDER` — enables GitHub's
+- **Platform:** Ko-fi (owner decision 2026-07-22, superseding the earlier Buy Me a Coffee
+  choice — Ko-fi takes 0% platform fee on donations), presented as "Buy me a beer".
+- **README:** badge in the top badge row + a Support section with a button linking to
+  `https://ko-fi.com/KOFI_USERNAME_PLACEHOLDER`, and one line of thanks copy in the
+  project's voice ("Ravens fly on beer money.").
+- **`.github/FUNDING.yml`:** `ko_fi: KOFI_USERNAME_PLACEHOLDER` — enables GitHub's
   native Sponsor button pointing at the same page.
-- **Placeholder contract:** `BMC_USERNAME_PLACEHOLDER` is used consistently in exactly these
+- **Placeholder contract:** `KOFI_USERNAME_PLACEHOLDER` is used consistently in exactly these
   two files so the real username is a single find-and-replace once the owner creates the
-  account at buymeacoffee.com (~2 minutes). Launch checklist includes this swap; the button
+  account at ko-fi.com (~2 minutes). Launch checklist includes this swap; the button
   must not ship to a public audience with the placeholder live.
 - Donations stay a tip jar, consistent with the market research verdict: free/MIT is the
   distribution strategy; no paywall.
