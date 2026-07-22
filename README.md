@@ -19,6 +19,7 @@ The original AI HQ was a pixel office with one character per session. This versi
 | **Status filter & triage** | Toggle the board by status — **Working / Waiting / Idle** — and one-click **Archive old** to sweep stale idle sessions off the board (kept in History) |
 | **Instant view switching** | An app shell keeps office, panel, and history mounted and live — toggling views is instant, WebSockets stay connected, office characters keep their desks. Card avatars jump straight to that agent in the office with a 📍 pin |
 | **⚔️ Guild of Agents (RPG)** (`/rpg`) | A full JRPG view of the same data: every session is a **hero** (class from role, level/XP from tokens), their task is a **quest**, working = **battling a monster** whose tier scales with the task (slime → goblin → golem → dragon), tool calls land as attacks in a live **battle log**, waiting agents kneel with a "!" — plus gold (labor) & mana (tokens) HUD, quest log, splash screen, and a CRT scanline toggle |
+| **RPG depth** | Same-workspace heroes form **parties** in battle formation vs a shared monster; the biggest token hoard spawns a **☠ WORLD BOSS** with its own banner + HP bar; finished quests trigger **victory sequences** (death animation, coin shower, fanfare); heroes earn **visible gear by level** (cape at 10, golden arms at 20, crown + aura at 30); monsters counterattack, attacks can comically **miss**, idle heroes swap **tavern gossip**, and an opt-in **chiptune SFX** engine scores it all |
 | **History** (`/history`) | Lifetime stat tiles, SVG trend charts (tokens / cost / sessions over time), and a sortable **per-session archive** that survives clearing the board |
 | **Cost & labor accounting** | Infers a role per session → salary → hourly rate → **labor value** from active work time; API cost estimated from the transcript |
 | **"Needs you" alerts** | Pulsing banner, chime, OS notification, and tab-title badge when an agent finishes or asks for input (with mute) |
@@ -39,7 +40,7 @@ The original AI HQ was a pixel office with one character per session. This versi
 ![History](aihq-history.png)
 
 ### ⚔️ Guild of Agents — the RPG view (`/rpg`)
-Heroes battle project monsters while tool calls stream into the battle log. Priya (Lv.31) is fighting *the ai-hq Dragon*; Lola casts *Terminal Incantation* on a Golem.
+Heroes battle project monsters while tool calls stream into the battle log. A **☠ WORLD BOSS** banner tracks the biggest fight — here Priya (Lv.31, crowned at 30+) duels *the Dreaded ai-hq Dragon*, and her attack just comically missed ("the Dragon snickers").
 ![Guild of Agents RPG](aihq-rpg.png)
 
 ### Pixel Office — the original real-time office view (`/`)
