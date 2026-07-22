@@ -46,7 +46,7 @@ AgentQuest solves both: it's a real operations panel (cost, labor value, alerts,
 Requirements: **Node 18+**, and [Claude Code](https://claude.com/claude-code) (any surface: CLI, VS Code, Claude Desktop).
 
 ```bash
-git clone https://github.com/Kapala-Solutions/ai-control-panel.git agentquest
+git clone https://github.com/Kapala-Solutions/agentquest.git
 cd agentquest
 npm install
 npm run setup     # wires the Claude Code hooks into ~/.claude/settings.json (backup + merge, idempotent)
