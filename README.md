@@ -6,11 +6,9 @@ Every **Claude Code** *and* **OpenAI Codex** session on your machine becomes a p
 
 Zero build. Zero frameworks. One `npm start`.
 
-<video src="https://github.com/Kapala-Solutions/ravenspire/raw/main/docs/demo/ravenspire-demo.mp4" poster="https://github.com/Kapala-Solutions/ravenspire/raw/main/ravenspire-rpg.png" controls muted playsinline width="960">
-  <a href="docs/demo/ravenspire-demo.mp4">▶️ Watch the 40-second Ravenspire demo</a>
-</video>
+[![Ravenspire — click to watch the 40-second demo](ravenspire-rpg.png)](docs/demo/ravenspire-demo.mp4)
 
-> ▶️ Player not loading? **[Watch the 40-second demo](docs/demo/ravenspire-demo.mp4)** — quest world, control panel, Claude + Codex side by side, and response analytics.
+▶️ **[Watch the 40-second demo](docs/demo/ravenspire-demo.mp4)** — quest world, control panel, Claude + Codex side by side, and response analytics.
 
 ---
 
