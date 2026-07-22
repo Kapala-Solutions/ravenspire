@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI HQ</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="application-name" content="AI HQ">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AI HQ">
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0e14; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  iframe.hidden { visibility: hidden; pointer-events: none; }
+</style>
+</head>
+<body>
+<!--
+  AI HQ shell — keeps every view mounted and live so switching between the
+  office, control panel, and history is instant (no page reloads, WebSocket
+  connections stay up, office characters keep their desks). The views are the
+  existing standalone pages loaded in same-origin frames; their nav links
+  detect they're embedded and ask the shell to switch instead of navigating.
+-->
+<iframe id="v-office" title="Office"></iframe>
+<iframe id="v-panel" class="hidden" title="Control Panel"></iframe>
+<iframe id="v-history" class="hidden" title="History"></iframe>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  }
+
+  const frames = {
+    office: document.getElementById('v-office'),
+    panel: document.getElementById('v-panel'),
+    history: document.getElementById('v-history'),
+  };
+
+  // Boot: forward a /?agent=<id> deep link into the office frame's URL
+  const params = new URLSearchParams(location.search);
+  const agent = params.get('agent');
+  frames.office.src = '/office' + (agent ? '?agent=' + encodeURIComponent(agent) : '');
+  frames.panel.src = '/dashboard';
+  frames.history.src = '/history';
+
+  let current = null;
+  function show(name) {
+    if (!frames[name] || name === current) return;
+    current = name;
+    for (const [k, f] of Object.entries(frames)) f.classList.toggle('hidden', k !== name);
+    history.replaceState(null, '', name === 'office' && !agent ? '/' : '/#' + name);
+    try { frames[name].contentWindow.focus(); } catch {}
+  }
+
+  // Messages from embedded views: tab switches, agent jumps, title/badge updates
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'nav' && frames[e.data.view]) show(e.data.view);
+    else if (e.data.type === 'show-agent') {
+      show('office');
+      try { frames.office.contentWindow.postMessage({ type: 'highlight-agent', id: e.data.id }, location.origin); } catch {}
+    } else if (e.data.type === 'title' && typeof e.data.text === 'string') {
+      // adopt only the waiting-count badge; otherwise keep the neutral app title
+      document.title = e.data.text.includes('⏳') ? e.data.text : 'AI HQ';
+    }
+  });
+
+  // Initial tab: explicit agent link → office; otherwise restore from the hash
+  const initial = agent ? 'office' : ({ '#panel': 'panel', '#history': 'history' }[location.hash] || 'office');
+  show(initial);
+</script>
+</body>
+</html>

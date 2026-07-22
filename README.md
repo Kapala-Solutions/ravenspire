@@ -17,6 +17,7 @@ The original AI HQ was a pixel office with one character per session. This versi
 | **Control Panel** (`/dashboard`) | Rich per-session cards: persona name, live activity line, model, IDE, token breakdown (in/out/cache), API cost + cost breakdown, message count, uptime |
 | **Session grouping** | Sessions from the same workspace (host + IDE + folder) collapse into expandable **team cards** with aggregate tokens/cost/labor — no more 8 cards for one project |
 | **Status filter & triage** | Toggle the board by status — **Working / Waiting / Idle** — and one-click **Archive old** to sweep stale idle sessions off the board (kept in History) |
+| **Instant view switching** | An app shell keeps office, panel, and history mounted and live — toggling views is instant, WebSockets stay connected, office characters keep their desks. Card avatars jump straight to that agent in the office with a 📍 pin |
 | **History** (`/history`) | Lifetime stat tiles, SVG trend charts (tokens / cost / sessions over time), and a sortable **per-session archive** that survives clearing the board |
 | **Cost & labor accounting** | Infers a role per session → salary → hourly rate → **labor value** from active work time; API cost estimated from the transcript |
 | **"Needs you" alerts** | Pulsing banner, chime, OS notification, and tab-title badge when an agent finishes or asks for input (with mute) |
@@ -50,13 +51,14 @@ npm install
 node server.js
 ```
 
-The server listens on **http://localhost:3456** (and prints your network URL). It serves three views:
+The server listens on **http://localhost:3456** (and prints your network URL). It serves three views inside a persistent app shell:
 
 | URL | View |
 | --- | --- |
-| `/` | Pixel-art office |
-| `/dashboard` | Control panel (cards, grouping, cost/labor) |
-| `/history` | Trends + session archive |
+| `/` | **App shell** — office, panel, and history all stay mounted and live; switching is instant (no reloads). Office shows first; `/#panel` and `/#history` deep-link the other tabs |
+| `/office` | Pixel-art office (standalone) |
+| `/dashboard` | Control panel (standalone) |
+| `/history` | Trends + session archive (standalone) |
 
 ### 2. Wire up Claude Code hooks
 

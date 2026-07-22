@@ -423,6 +423,25 @@
     } finally { input.disabled = false; }
   }
 
+  // Running inside the AI HQ shell? Then nav links switch tabs (no reload),
+  // the avatar jump posts to the shell, and title/badge updates are forwarded.
+  const EMBEDDED = window.parent !== window;
+  function setTitle(text) {
+    document.title = text;
+    if (EMBEDDED) { try { parent.postMessage({ type: 'title', text }, location.origin); } catch {} }
+  }
+  if (EMBEDDED) {
+    const MAP = { '/': 'office', '/history': 'history' };
+    document.querySelectorAll('a.toplink[href]').forEach(a => {
+      const view = MAP[a.getAttribute('href')];
+      if (!view) return;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        parent.postMessage({ type: 'nav', view }, location.origin);
+      });
+    });
+  }
+
   let sessions = [];
   let roleList = ['Software Engineer'];
   fetch('/roles').then(r => r.json()).then(d => { if (d.roles) roleList = d.roles; }).catch(()=>{});
@@ -569,9 +588,13 @@
       el.onclick = (e) => { e.stopPropagation(); openFolder(el.dataset.open); };
     });
 
-    // avatar → jump to this agent in the office view
+    // avatar → jump to this agent in the office view (instant tab switch in the shell)
     grid.querySelectorAll('.avatar[data-office]').forEach(el => {
-      el.onclick = (e) => { e.stopPropagation(); location.href = '/?agent=' + encodeURIComponent(el.dataset.office); };
+      el.onclick = (e) => {
+        e.stopPropagation();
+        if (EMBEDDED) parent.postMessage({ type: 'show-agent', id: el.dataset.office }, location.origin);
+        else location.href = '/?agent=' + encodeURIComponent(el.dataset.office);
+      };
     });
     grid.querySelectorAll('.card').forEach(card => {
       card.onclick = (e) => {
@@ -792,13 +815,13 @@
     if (!waiting.length) {
       bar.style.display = 'none';
       prevWaiting = new Set();
-      document.title = 'AI HQ — Control Panel';
+      setTitle('AI HQ — Control Panel');
       return;
     }
     const who = waiting.map(s => `${esc(s.name)} (${esc(s.attentionReason || 'waiting')})`).join(' · ');
     bar.innerHTML = `<span class="bell">🔔</span> <span>${waiting.length} agent${waiting.length>1?'s':''} waiting for you</span> <span class="who">${who}</span>`;
     bar.style.display = 'flex';
-    document.title = `(${waiting.length}) ⏳ AI HQ`;
+    setTitle(`(${waiting.length}) ⏳ AI HQ`);
 
     // fire chime + OS notification only for NEW waiters
     const now = new Set(waiting.map(s => s.sessionId));

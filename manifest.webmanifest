@@ -19,7 +19,7 @@
   ],
   "shortcuts": [
     { "name": "Office view", "short_name": "Office", "url": "/", "description": "Pixel-art office of live sessions" },
-    { "name": "Control Panel", "short_name": "Panel", "url": "/dashboard", "description": "Data dashboard of all sessions" },
-    { "name": "History", "short_name": "History", "url": "/history", "description": "Historical trends & session archive" }
+    { "name": "Control Panel", "short_name": "Panel", "url": "/#panel", "description": "Data dashboard of all sessions" },
+    { "name": "History", "short_name": "History", "url": "/#history", "description": "Historical trends & session archive" }
   ]
 }

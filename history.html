@@ -178,6 +178,20 @@
   <div class="chart-tooltip" id="chartTip"></div>
 
 <script>
+  // Running inside the AI HQ shell? Nav links switch tabs instead of reloading.
+  (function() {
+    if (window.parent === window) return;
+    const MAP = { '/': 'office', '/dashboard': 'panel', '/history': 'history' };
+    document.querySelectorAll('a.toplink[href]').forEach(a => {
+      const view = MAP[a.getAttribute('href')];
+      if (!view) return;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        parent.postMessage({ type: 'nav', view }, location.origin);
+      });
+    });
+  })();
+
   // ---------- formatting helpers ----------
   function fmt(n) {
     n = +n || 0;

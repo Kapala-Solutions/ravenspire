@@ -2546,6 +2546,12 @@ const pixelOffice = (() => {
   // arrived via /?agent=<id> from a panel card — pin that character once it spawns
   let pendingHighlight = new URLSearchParams(location.search).get('agent');
 
+  // shell hook: highlight an agent without reloading (panel avatar → office tab)
+  window.__highlightAgent = (extId) => {
+    if (sessionMap[extId] !== undefined) pixelOffice.highlightSession(sessionMap[extId]);
+    else pendingHighlight = extId;
+  };
+
   function applyMeta(externalId) {
     const m = sessionMeta[externalId];
     if (m && sessionMap[externalId] !== undefined) {
@@ -2677,6 +2683,26 @@ const pixelOffice = (() => {
     ws.onerror = () => ws.close();
   }
   connect();
+})();
+
+// Embedded in the AI HQ shell (app.html): nav links ask the shell to switch
+// tabs instead of navigating (no reload), and the shell can request an agent
+// highlight when you arrive from a panel card.
+(function() {
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'highlight-agent' && window.__highlightAgent) window.__highlightAgent(e.data.id);
+  });
+  if (window.parent === window) return; // standalone — normal navigation
+  const MAP = { '/dashboard': 'panel', '/history': 'history' };
+  document.querySelectorAll('a.view-toggle[href]').forEach(a => {
+    const view = MAP[a.getAttribute('href')];
+    if (!view) return;
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      parent.postMessage({ type: 'nav', view }, location.origin);
+    });
+  });
 })();
 
 // Setup panel functionality

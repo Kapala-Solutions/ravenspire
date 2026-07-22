@@ -606,7 +606,8 @@ const server = http.createServer((req, res) => {
 
   // Static files
   let urlPath = req.url.split('?')[0];
-  if (urlPath === '/') urlPath = '/index.html';
+  if (urlPath === '/') urlPath = '/app.html';                 // shell: keeps all views mounted
+  else if (urlPath === '/office' || urlPath === '/office/') urlPath = '/index.html';
   else if (urlPath === '/dashboard' || urlPath === '/dashboard/') urlPath = '/dashboard.html';
   else if (urlPath === '/history' || urlPath === '/history/') urlPath = '/history.html';
   let filePath = path.join(__dirname, urlPath);
