@@ -130,6 +130,7 @@
     <a class="toplink" href="/">🏢 Office</a>
     <a class="toplink" href="/dashboard">📊 Control Panel</a>
     <a class="toplink active" href="/history">📈 History</a>
+    <a class="toplink" href="/rpg" title="Guild of Agents — RPG quest view">⚔️ RPG</a>
     <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
   </header>
 
@@ -181,7 +182,7 @@
   // Running inside the AI HQ shell? Nav links switch tabs instead of reloading.
   (function() {
     if (window.parent === window) return;
-    const MAP = { '/': 'office', '/dashboard': 'panel', '/history': 'history' };
+    const MAP = { '/': 'office', '/dashboard': 'panel', '/history': 'history', '/rpg': 'rpg' };
     document.querySelectorAll('a.toplink[href]').forEach(a => {
       const view = MAP[a.getAttribute('href')];
       if (!view) return;

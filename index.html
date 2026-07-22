@@ -376,6 +376,7 @@
       <div class="nav-actions">
         <a href="/dashboard" class="view-toggle" title="Switch to the data control panel">📊 Control Panel</a>
         <a href="/history" class="view-toggle" title="Historical trends & session archive">📈 History</a>
+        <a href="/rpg" class="view-toggle" title="Guild of Agents — RPG quest view">⚔️ RPG</a>
         <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
       </div>
     </div>
@@ -2694,7 +2695,7 @@ const pixelOffice = (() => {
     if (e.data.type === 'highlight-agent' && window.__highlightAgent) window.__highlightAgent(e.data.id);
   });
   if (window.parent === window) return; // standalone — normal navigation
-  const MAP = { '/dashboard': 'panel', '/history': 'history' };
+  const MAP = { '/dashboard': 'panel', '/history': 'history', '/rpg': 'rpg' };
   document.querySelectorAll('a.view-toggle[href]').forEach(a => {
     const view = MAP[a.getAttribute('href')];
     if (!view) return;

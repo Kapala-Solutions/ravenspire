@@ -3,9 +3,9 @@
 //   - Dynamic data (/sessions, /event, /history, /roles, /status, WebSocket): never cached.
 //   - App shell (HTML): network-first, fall back to cache when the server is down.
 //   - Static assets (icons, manifest, scripts): cache-first, refreshed in the background.
-const CACHE = 'aihq-v3';
+const CACHE = 'aihq-v4';
 const SHELL = [
-  '/', '/office', '/dashboard', '/history',
+  '/', '/office', '/dashboard', '/history', '/rpg',
   '/manifest.webmanifest',
   '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon-32.png',
 ];

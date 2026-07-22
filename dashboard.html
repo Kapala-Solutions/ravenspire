@@ -298,6 +298,7 @@
     <button class="toplink" id="muteBtn" title="Toggle alert sound">🔔</button>
     <a class="toplink" href="/">🏢 Office view</a>
     <a class="toplink" href="/history">📈 History</a>
+    <a class="toplink" href="/rpg" title="Guild of Agents — RPG quest view">⚔️ RPG</a>
     <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
   </header>
 
@@ -431,7 +432,7 @@
     if (EMBEDDED) { try { parent.postMessage({ type: 'title', text }, location.origin); } catch {} }
   }
   if (EMBEDDED) {
-    const MAP = { '/': 'office', '/history': 'history' };
+    const MAP = { '/': 'office', '/history': 'history', '/rpg': 'rpg' };
     document.querySelectorAll('a.toplink[href]').forEach(a => {
       const view = MAP[a.getAttribute('href')];
       if (!view) return;

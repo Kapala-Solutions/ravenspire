@@ -29,6 +29,7 @@
 <iframe id="v-office" title="Office"></iframe>
 <iframe id="v-panel" class="hidden" title="Control Panel"></iframe>
 <iframe id="v-history" class="hidden" title="History"></iframe>
+<iframe id="v-rpg" class="hidden" title="Guild of Agents (RPG)"></iframe>
 
 <script>
   if ('serviceWorker' in navigator) {
@@ -39,6 +40,7 @@
     office: document.getElementById('v-office'),
     panel: document.getElementById('v-panel'),
     history: document.getElementById('v-history'),
+    rpg: document.getElementById('v-rpg'),
   };
 
   // Boot: forward a /?agent=<id> deep link into the office frame's URL
@@ -47,6 +49,7 @@
   frames.office.src = '/office' + (agent ? '?agent=' + encodeURIComponent(agent) : '');
   frames.panel.src = '/dashboard';
   frames.history.src = '/history';
+  frames.rpg.src = '/rpg';
 
   let current = null;
   function show(name) {
@@ -71,7 +74,7 @@
   });
 
   // Initial tab: explicit agent link → office; otherwise restore from the hash
-  const initial = agent ? 'office' : ({ '#panel': 'panel', '#history': 'history' }[location.hash] || 'office');
+  const initial = agent ? 'office' : ({ '#panel': 'panel', '#history': 'history', '#rpg': 'rpg' }[location.hash] || 'office');
   show(initial);
 </script>
 </body>

@@ -610,6 +610,7 @@ const server = http.createServer((req, res) => {
   else if (urlPath === '/office' || urlPath === '/office/') urlPath = '/index.html';
   else if (urlPath === '/dashboard' || urlPath === '/dashboard/') urlPath = '/dashboard.html';
   else if (urlPath === '/history' || urlPath === '/history/') urlPath = '/history.html';
+  else if (urlPath === '/rpg' || urlPath === '/rpg/' || urlPath === '/game') urlPath = '/rpg.html';
   let filePath = path.join(__dirname, urlPath);
   const ext = path.extname(filePath);
   const contentTypes = {

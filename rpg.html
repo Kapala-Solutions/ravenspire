@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI HQ — Guild of Agents</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a0c12">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0a0c12; }
+  body { font-family: 'Courier New', monospace; color: #e8dcc0; display: flex; flex-direction: column; }
+
+  /* ---- RPG chrome ---- */
+  .hud {
+    display: flex; align-items: center; gap: 14px; padding: 8px 14px;
+    background: linear-gradient(180deg, #1d1710, #14100a);
+    border-bottom: 2px solid #6b5220; flex: 0 0 auto; z-index: 5;
+  }
+  .guild-title { font-weight: bold; letter-spacing: 2px; color: #ffd76a; text-shadow: 0 2px 0 #4a3208; font-size: 15px; white-space: nowrap; }
+  .hud-stats { display: flex; gap: 16px; margin-left: 10px; font-size: 12px; flex-wrap: wrap; }
+  .hud-stat b { color: #ffd76a; font-variant-numeric: tabular-nums; }
+  .hud-spacer { margin-left: auto; }
+  .rpg-btn {
+    color: #d9c184; text-decoration: none; font-size: 12px; cursor: pointer;
+    padding: 5px 10px; border: 1px solid #6b5220; border-radius: 6px;
+    background: linear-gradient(180deg, #241c10, #191308); white-space: nowrap;
+  }
+  .rpg-btn:hover { color: #ffe9a8; border-color: #c9a227; }
+  .rpg-btn.toggled { color: #ffe9a8; border-color: #c9a227; background: #2c2210; }
+
+  .main { flex: 1; display: flex; min-height: 0; }
+  #stage { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #06070c; min-width: 0; }
+  canvas#world { image-rendering: pixelated; display: block; }
+
+  /* quest log panel */
+  #questPanel {
+    width: 300px; flex: 0 0 auto; overflow-y: auto;
+    background: linear-gradient(180deg, #17120a, #100d07);
+    border-left: 2px solid #6b5220; padding: 10px;
+  }
+  #questPanel h3 { margin: 2px 0 10px; font-size: 13px; letter-spacing: 2px; color: #ffd76a; text-align: center; }
+  .qrow {
+    border: 1px solid #4a3a18; border-radius: 8px; padding: 8px; margin-bottom: 8px;
+    background: rgba(255, 215, 106, 0.04); cursor: pointer;
+  }
+  .qrow:hover { border-color: #c9a227; background: rgba(255, 215, 106, 0.09); }
+  .qrow .qh { display: flex; align-items: center; gap: 8px; }
+  .qemb { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex: 0 0 auto; border: 1px solid rgba(0,0,0,.4); }
+  .qname { font-size: 12px; font-weight: bold; color: #ffe9a8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qsub { font-size: 10px; color: #b7a476; }
+  .qquest { font-size: 10.5px; color: #cbbd97; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qxp { height: 4px; background: #241c10; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+  .qxp i { display: block; height: 100%; background: linear-gradient(90deg, #c9a227, #ffd76a); }
+  .qfoot { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10px; }
+  .qstate.fight { color: #7fdc7f; } .qstate.wait { color: #ffcf5a; } .qstate.rest { color: #8a94a8; }
+  .qgold { color: #ffd76a; }
+
+  /* battle log ticker */
+  #ticker {
+    flex: 0 0 auto; margin: 0; padding: 8px 16px 10px;
+    background: linear-gradient(180deg, #1a1409, #120e06);
+    border-top: 2px solid #6b5220; min-height: 74px; position: relative;
+  }
+  #ticker::before { content: "⚔ BATTLE LOG"; position: absolute; top: -11px; left: 14px; font-size: 10px; letter-spacing: 2px; color: #ffd76a; background: #14100a; padding: 1px 8px; border: 1px solid #6b5220; border-radius: 6px; }
+  #tickerLines { font-size: 12px; line-height: 1.55; }
+  #tickerLines div { opacity: .55; }
+  #tickerLines div:last-child { opacity: 1; color: #ffe9a8; }
+  .cursor { position: absolute; right: 14px; bottom: 8px; color: #ffd76a; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* splash */
+  #splash {
+    position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    background: radial-gradient(ellipse at center, #141b2e 0%, #05060a 75%);
+    transition: opacity .8s; cursor: pointer;
+  }
+  #splash.gone { opacity: 0; pointer-events: none; }
+  #splash .t1 { font-size: clamp(26px, 5vw, 52px); font-weight: bold; letter-spacing: 6px; color: #ffd76a; text-shadow: 0 3px 0 #4a3208, 0 0 30px rgba(255,215,106,.35); }
+  #splash .t2 { font-size: clamp(13px, 2vw, 20px); letter-spacing: 8px; color: #cbbd97; }
+  #splash .t3 { margin-top: 26px; font-size: 13px; color: #ffe9a8; animation: blink 1.1s steps(1) infinite; letter-spacing: 2px; }
+
+  /* scanlines (retro toggle) */
+  body.scanlines #stage::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px);
+  }
+  @media (max-width: 900px) { #questPanel { display: none; } }
+</style>
+</head>
+<body>
+  <div class="hud">
+    <div class="guild-title">⚔ AI-HQ · GUILD OF AGENTS</div>
+    <div class="hud-stats">
+      <span class="hud-stat">🪙 <b id="h-gold">0g</b></span>
+      <span class="hud-stat">🔮 <b id="h-mana">0</b> mana</span>
+      <span class="hud-stat">🛡 <b id="h-heroes">0</b> heroes</span>
+      <span class="hud-stat">📜 <b id="h-quests">0</b> quests</span>
+    </div>
+    <div class="hud-spacer"></div>
+    <span class="rpg-btn" id="crtBtn" title="Toggle retro scanlines">📺 CRT</span>
+    <a class="rpg-btn" href="/office">🏢 Office</a>
+    <a class="rpg-btn" href="/dashboard">📊 Panel</a>
+    <a class="rpg-btn" href="/history">📈 History</a>
+  </div>
+
+  <div class="main">
+    <div id="stage"><canvas id="world"></canvas></div>
+    <div id="questPanel"><h3>— QUEST LOG —</h3><div id="questList"></div></div>
+  </div>
+
+  <div id="ticker"><div id="tickerLines"></div><span class="cursor">▼</span></div>
+
+  <div id="splash"><div class="t1">⚔ AI-HQ ⚔</div><div class="t2">GUILD OF AGENTS</div><div class="t3">▶ PRESS TO BEGIN</div></div>
+
+<script>
+'use strict';
+// ============================================================================
+// AI-HQ: Guild of Agents — a JRPG visualization of live Claude Code sessions.
+// Every session is a hero; their task is a quest; working = battling a monster
+// whose tier scales with the task's tokens; tool events land as attacks in the
+// battle log; waiting = "!" calling for the player; idle = resting at the inn.
+// Zero dependencies — procedural pixel art on canvas, fed by the same
+// WebSocket the office and control panel use.
+// ============================================================================
+
+// ---------- tiny helpers ----------
+function mulberry32(a) { return function() { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const dist = (a, b, c, d) => Math.hypot(c - a, d - b);
+function fmt(n) { n = +n || 0; if (n >= 1e9) return (n/1e9).toFixed(1)+'B'; if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e3) return (n/1e3).toFixed(1)+'k'; return String(Math.round(n)); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ---------- world constants ----------
+const TILE = 32, MAPW = 48, MAPH = 27;
+const WORLD_W = MAPW * TILE, WORLD_H = MAPH * TILE;
+const T = { GRASS: 0, PATH: 1, WATER: 2, FLOOR: 3, WALL: 4, ROOF: 5, CLEAR: 6 };
+
+// classes: role -> RPG class
+function classOf(role) {
+  const r = (role || '').toLowerCase();
+  if (r.includes('front')) return { key: 'ranger',    title: 'Ranger',    icon: '🏹', armor: '#3f7d3f', trim: '#2c5a2c' };
+  if (r.includes('back'))  return { key: 'paladin',   title: 'Paladin',   icon: '🛡', armor: '#b9a44c', trim: '#8a7526' };
+  if (r.includes('data engineer')) return { key: 'wizard', title: 'Wizard', icon: '🔮', armor: '#4a4aa8', trim: '#32327a' };
+  if (r.includes('analyst')) return { key: 'sage',    title: 'Sage',      icon: '📜', armor: '#7a6a9a', trim: '#584a74' };
+  if (r.includes('devops')) return { key: 'artificer', title: 'Artificer', icon: '⚒', armor: '#8a5a2a', trim: '#63401c' };
+  if (r.includes('qa'))    return { key: 'rogue',     title: 'Rogue',     icon: '🗡', armor: '#3c3c46', trim: '#26262e' };
+  if (r.includes('full'))  return { key: 'dragoon',   title: 'Dragoon',   icon: '🐉', armor: '#2e6d6d', trim: '#1e4d4d' };
+  if (r.includes('architect')) return { key: 'archmage', title: 'Archmage', icon: '👑', armor: '#6a2ea0', trim: '#4a1e73' };
+  if (r.includes('writer')) return { key: 'bard',     title: 'Bard',      icon: '✒', armor: '#a04a6a', trim: '#733048' };
+  return { key: 'knight', title: 'Knight', icon: '⚔', armor: '#9aa4b4', trim: '#6b7484' };
+}
+function levelOf(tokens) { return clamp(Math.floor(Math.pow((tokens || 0) / 1e4, 0.35)) + 1, 1, 99); }
+function xpProgress(tokens) {
+  const lvl = levelOf(tokens);
+  const at = l => Math.pow(l - 1, 1 / 0.35) * 1e4;
+  const lo = at(lvl), hi = at(lvl + 1);
+  return clamp(((tokens || 0) - lo) / Math.max(1, hi - lo), 0, 1);
+}
+function monsterTier(tokens) {
+  if (tokens < 1e6)  return { kind: 'slime',  label: 'Slime',  hp: 900 };
+  if (tokens < 15e6) return { kind: 'goblin', label: 'Goblin', hp: 2600 };
+  if (tokens < 6e7)  return { kind: 'golem',  label: 'Golem',  hp: 7000 };
+  return { kind: 'dragon', label: 'Dragon', hp: 16000 };
+}
+function projName(s) { return s.title || ((s.cwd || '').split(/[\\/]/).filter(Boolean).pop()) || 'the Unknown'; }
+
+// ---------- map layout ----------
+const grid = [];            // terrain
+const deco = [];            // {t:'tree'|'rock'|'flower'|'torch'|'fire'|'stool'|'board'|'barrel'|'dummy', x, y}
+const rng = mulberry32(20260722);
+for (let y = 0; y < MAPH; y++) { grid[y] = []; for (let x = 0; x < MAPW; x++) grid[y][x] = T.GRASS; }
+
+// guild hall: cols 2-16, rows 0-9 (roof rows 0-1, wall face row 2, interior 3-8, south wall row 9 w/ door)
+for (let x = 1; x <= 17; x++) for (let y = 0; y <= 1; y++) grid[y][x] = T.ROOF;
+for (let x = 2; x <= 16; x++) grid[2][x] = T.WALL;
+for (let y = 3; y <= 8; y++) for (let x = 2; x <= 16; x++) grid[y][x] = (x === 2 || x === 16) ? T.WALL : T.FLOOR;
+for (let x = 2; x <= 16; x++) grid[9][x] = (x === 9 || x === 10) ? T.FLOOR : T.WALL;
+
+// paths: door -> row 13 -> east; spurs to battle sites
+for (let y = 10; y <= 13; y++) { grid[y][9] = T.PATH; grid[y][10] = T.PATH; }
+for (let x = 9; x <= 45; x++) grid[13][x] = T.PATH;
+
+// battle sites (dirt clearings; hero left of x, monster right)
+const SITES = [
+  { x: 22, y: 7 }, { x: 30, y: 5 }, { x: 38, y: 8 }, { x: 44, y: 5 },
+  { x: 21, y: 19 }, { x: 29, y: 21 }, { x: 37, y: 18 }, { x: 44, y: 21 },
+];
+for (const s of SITES) {
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -2; dx <= 2; dx++) {
+    const gx = s.x + dx, gy = s.y + dy;
+    if (gy >= 0 && gy < MAPH && gx >= 0 && gx < MAPW) grid[gy][gx] = T.CLEAR;
+  }
+  // spur from the main road
+  const dir = s.y < 13 ? -1 : 1;
+  for (let y = 13 + dir; dir < 0 ? y >= s.y + 2 : y <= s.y - 2; y += dir) if (grid[y] && grid[y][s.x] === T.GRASS) grid[y][s.x] = T.PATH;
+  deco.push({ t: 'torch', x: s.x - 2.2, y: s.y - 1.4 }, { t: 'torch', x: s.x + 2.2, y: s.y - 1.4 });
+}
+
+// pond (bottom-left)
+for (let y = 19; y <= 24; y++) for (let x = 3; x <= 9; x++) {
+  const edge = (y === 19 || y === 24) && (x === 3 || x === 9);
+  if (!edge) grid[y][x] = T.WATER;
+}
+
+// interior furniture + exterior set dressing
+deco.push({ t: 'fire', x: 7, y: 6.2 });
+deco.push({ t: 'board', x: 12.6, y: 10.6 });
+deco.push({ t: 'barrel', x: 3.4, y: 3.9 }, { t: 'barrel', x: 4.2, y: 3.9 }, { t: 'barrel', x: 15.5, y: 3.9 });
+const REST_SPOTS = [[4,5],[6,5],[8,5],[10,5],[12,5],[4,7.4],[6,7.4],[12,7.4],[14,5],[14,7.4]];
+for (const [sx, sy] of REST_SPOTS) deco.push({ t: 'stool', x: sx, y: sy + 0.45 });
+const BOARD_SPOTS = [[12,12],[13.4,12],[14.8,12],[11.2,12.8],[16,12.8],[13,13.6]];
+const DUMMY_SPOTS = [[19,16],[21.5,16],[24,16],[26.5,16]];
+for (const [dx, dy] of DUMMY_SPOTS) deco.push({ t: 'dummy', x: dx + 1.1, y: dy });
+
+// trees / rocks / flowers on free grass (seeded)
+function freeGrass(x, y) {
+  if (grid[y][x] !== T.GRASS) return false;
+  for (const s of SITES) if (Math.abs(x - s.x) < 4 && Math.abs(y - s.y) < 3) return false;
+  if (y >= 10 && y <= 14 && x >= 8) return false;               // road corridor
+  if (x >= 10 && x <= 18 && y >= 10 && y <= 14) return false;   // board area
+  if (x >= 18 && x <= 28 && y >= 15 && y <= 17) return false;   // dummies
+  return true;
+}
+for (let y = 0; y < MAPH; y++) for (let x = 0; x < MAPW; x++) {
+  if (!freeGrass(x, y)) continue;
+  const border = x < 1 || x > MAPW - 2 || y > MAPH - 2 || (y < 1 && x > 18);
+  const r = rng();
+  if (border && r < 0.72) deco.push({ t: 'tree', x: x + 0.5, y: y + 0.9 });
+  else if (r < 0.045) deco.push({ t: 'tree', x: x + 0.5, y: y + 0.9 });
+  else if (r < 0.075) deco.push({ t: 'rock', x: x + 0.5, y: y + 0.75 });
+  else if (r < 0.135) deco.push({ t: 'flower', x: x + 0.5, y: y + 0.6 });
+}
+deco.sort((a, b) => a.y - b.y);
+
+// ---------- static map painting ----------
+const base = document.createElement('canvas');
+base.width = WORLD_W; base.height = WORLD_H;
+const bctx = base.getContext('2d');
+const trng = mulberry32(77);
+function paintTile(c, x, y, t) {
+  const px = x * TILE, py = y * TILE;
+  if (t === T.GRASS || t === T.CLEAR) {
+    c.fillStyle = t === T.CLEAR ? '#7d6748' : ((x + y) % 2 ? '#3e8948' : '#3a8143');
+    c.fillRect(px, py, TILE, TILE);
+    for (let i = 0; i < 4; i++) {
+      const rx = px + trng() * 28, ry = py + trng() * 28;
+      c.fillStyle = t === T.CLEAR ? (trng() < .5 ? '#8a7354' : '#6f5b3e') : (trng() < .5 ? '#46955a' : '#357a3e');
+      c.fillRect(rx, ry, 3, 3);
+    }
+  } else if (t === T.PATH) {
+    c.fillStyle = '#b8905c'; c.fillRect(px, py, TILE, TILE);
+    c.fillStyle = '#a67c4e';
+    for (let i = 0; i < 5; i++) c.fillRect(px + trng() * 27, py + trng() * 27, 4, 3);
+    c.fillStyle = 'rgba(0,0,0,0.08)'; c.fillRect(px, py, TILE, 2);
+  } else if (t === T.WATER) {
+    c.fillStyle = '#2f6db8'; c.fillRect(px, py, TILE, TILE);
+  } else if (t === T.FLOOR) {
+    c.fillStyle = '#8a5a33'; c.fillRect(px, py, TILE, TILE);
+    c.fillStyle = '#7b4f2c'; c.fillRect(px, py + 15, TILE, 2);
+    c.fillStyle = 'rgba(0,0,0,.12)'; c.fillRect(px + ((x % 2) * 16), py, 1, TILE);
+  } else if (t === T.WALL) {
+    c.fillStyle = '#5d4037'; c.fillRect(px, py, TILE, TILE);
+    c.fillStyle = '#4a332c';
+    c.fillRect(px, py + 10, TILE, 3); c.fillRect(px, py + 24, TILE, 3);
+    c.fillRect(px + 8, py, 3, 10); c.fillRect(px + 22, py + 13, 3, 11);
+  } else if (t === T.ROOF) {
+    c.fillStyle = '#8b2e2e'; c.fillRect(px, py, TILE, TILE);
+    c.fillStyle = '#7a2626'; c.fillRect(px, py + (y === 0 ? 20 : 8), TILE, 4);
+    c.fillStyle = '#9b3a3a'; c.fillRect(px, py + (y === 0 ? 4 : 22), TILE, 3);
+  }
+}
+for (let y = 0; y < MAPH; y++) for (let x = 0; x < MAPW; x++) paintTile(bctx, x, y, grid[y][x]);
+// hall sign + door mat + windows
+bctx.fillStyle = '#3a2a14'; bctx.fillRect(8.2 * TILE, 1.35 * TILE, 3.6 * TILE, 0.85 * TILE);
+bctx.strokeStyle = '#c9a227'; bctx.lineWidth = 2; bctx.strokeRect(8.2 * TILE, 1.35 * TILE, 3.6 * TILE, 0.85 * TILE);
+bctx.fillStyle = '#ffd76a'; bctx.font = 'bold 13px monospace'; bctx.textAlign = 'center';
+bctx.fillText('★ GUILD ★', 10 * TILE, 1.95 * TILE);
+bctx.textAlign = 'left';
+for (const wx of [4.5, 13.5]) { bctx.fillStyle = '#20304a'; bctx.fillRect(wx * TILE, 2.2 * TILE, 20, 16); bctx.strokeStyle = '#c9a227'; bctx.strokeRect(wx * TILE, 2.2 * TILE, 20, 16); }
+bctx.fillStyle = '#6f5b3e'; bctx.fillRect(9 * TILE + 4, 9.7 * TILE, TILE * 2 - 8, 8);
+// bar counter
+bctx.fillStyle = '#6d4c2f'; bctx.fillRect(4 * TILE, 3.1 * TILE, 5 * TILE, 18);
+bctx.fillStyle = '#5c3f26'; bctx.fillRect(4 * TILE, 3.1 * TILE + 14, 5 * TILE, 4);
+for (let i = 0; i < 3; i++) { bctx.fillStyle = '#d9b970'; bctx.fillRect((4.6 + i * 1.5) * TILE, 3.05 * TILE, 7, 8); }
+
+// ---------- canvas / camera ----------
+const canvas = document.getElementById('world');
+const ctx = canvas.getContext('2d');
+let SCALE = 1;
+function resize() {
+  const st = document.getElementById('stage');
+  const aw = st.clientWidth, ah = st.clientHeight;
+  SCALE = Math.min(aw / WORLD_W, ah / WORLD_H);
+  canvas.width = WORLD_W; canvas.height = WORLD_H;
+  canvas.style.width = Math.floor(WORLD_W * SCALE) + 'px';
+  canvas.style.height = Math.floor(WORLD_H * SCALE) + 'px';
+  ctx.imageSmoothingEnabled = false;
+}
+window.addEventListener('resize', resize);
+
+// ---------- sprite painters (procedural pixel art, S = logical pixel) ----------
+const S = 3;
+function px(c, ox, oy, x, y, w, h, color) { c.fillStyle = color; c.fillRect(ox + x * S, oy + y * S, w * S, h * S); }
+
+// hero: origin at feet center. facing: 1 right, -1 left. opts: {cls,color,walk,attackT,kneel,rest}
+function paintHero(c, hx, hy, o) {
+  c.save(); c.translate(hx, hy); if (o.facing < 0) c.scale(-1, 1);
+  const A = o.cls.armor, TR = o.cls.trim, skin = '#e8b88a', hair = o.color || '#444';
+  const step = o.walk ? Math.round(Math.sin(o.t / 110)) : 0;
+  const kneel = o.kneel ? 3 : 0;
+  const oy = kneel * S;
+  // shadow
+  c.fillStyle = 'rgba(0,0,0,0.28)'; c.beginPath(); c.ellipse(0, 2, 8 * S / 2 + 3, 3.4, 0, 0, 7); c.fill();
+  const g = (x, y, w, h, col) => px(c, 0, oy, x, y, w, h, col);
+  // legs
+  if (o.kneel) { g(-3, -3, 3, 3, TR); g(0.5, -2, 3, 2, TR); }
+  else { g(-3, -4 + (step > 0 ? 1 : 0), 2.6, 4 - (step > 0 ? 1 : 0), TR); g(0.6, -4 + (step < 0 ? 1 : 0), 2.6, 4 - (step < 0 ? 1 : 0), TR); }
+  // torso + belt + shoulder
+  g(-4, -11, 8, 7, A); g(-4, -5.4, 8, 1.4, '#2b2b2b'); g(-4.6, -11, 2, 3, TR);
+  // head + hair + eye
+  g(-3, -17, 7, 6, skin); g(-3, -18.2, 7, 2.4, hair); g(1.6, -15.2, 1.2, 1.2, '#222');
+  // class headgear / details
+  const k = o.cls.key;
+  if (k === 'knight') { g(-3.4, -18.8, 7.8, 1.6, '#9aa4b4'); g(3.4, -18.4, 1.2, 3, '#c33'); }
+  if (k === 'wizard' || k === 'archmage') { g(-4, -19, 9, 1.6, A); g(-1.4, -22.6, 4, 4, A); g(2, -20.6, 1.2, 1.2, '#ffd76a'); }
+  if (k === 'ranger') { g(-3.4, -18.8, 7.8, 2.2, '#2c5a2c'); }
+  if (k === 'rogue') { g(-3.6, -18.6, 8, 3.4, '#26262e'); g(1.6, -15.2, 1.4, 1.2, '#e33'); }
+  if (k === 'bard') { g(-3.4, -18.8, 7.8, 1.6, '#733048'); g(3, -20.4, 1, 2.4, '#ffd76a'); }
+  if (k === 'paladin') { g(-3.4, -18.8, 7.8, 1.6, '#b9a44c'); }
+  if (k === 'artificer') { g(-3.2, -16.4, 6.4, 1.4, '#c9a227'); }
+  if (k === 'dragoon') { g(-3.4, -18.8, 7.8, 1.6, '#2e6d6d'); g(-3.6, -20.6, 1.4, 2.4, '#bcd'); g(2.4, -20.6, 1.4, 2.4, '#bcd'); }
+  if (k === 'sage') { g(0.4, -15.6, 2.6, 1.8, '#dcd6ff'); }
+  // arm + weapon (attack swing)
+  const swing = o.attackT != null ? Math.sin(clamp(o.attackT, 0, 1) * Math.PI) : 0;
+  c.save();
+  c.translate(3 * S, (-9 + kneel) * S);
+  c.rotate((-100 * swing + 15) * Math.PI / 180);
+  px(c, 0, 0, -0.6, -1, 2, 4.5, skin); // arm
+  const w = { knight: 'sword', paladin: 'hammer', ranger: 'bow', rogue: 'dagger', wizard: 'staff', archmage: 'staff', sage: 'tome', artificer: 'wrench', bard: 'lute', dragoon: 'spear' }[k] || 'sword';
+  if (w === 'sword') { px(c, 0, 0, -0.2, -8.6, 1.4, 8, '#dfe7f2'); px(c, 0, 0, -1.4, -1.4, 3.8, 1.2, '#c9a227'); }
+  if (w === 'dagger') { px(c, 0, 0, -0.2, -5.4, 1.2, 5, '#cfd8e6'); px(c, 0, 0, -1.2, -1, 3.2, 1, '#888'); }
+  if (w === 'hammer') { px(c, 0, 0, 0, -7.4, 1.2, 7, '#8a6a3a'); px(c, 0, 0, -1.8, -9, 4.8, 2.6, '#aab2c0'); }
+  if (w === 'spear') { px(c, 0, 0, 0, -10.4, 1, 10, '#8a6a3a'); px(c, 0, 0, -0.6, -12, 2.2, 2.4, '#dfe7f2'); }
+  if (w === 'staff') { px(c, 0, 0, 0, -9, 1.2, 9.6, '#7a5a34'); px(c, 0, 0, -0.8, -10.8, 2.8, 2.4, k === 'archmage' ? '#c77dff' : '#6ec6ff'); }
+  if (w === 'tome') { px(c, 0, 0, -0.6, -4, 3.4, 3, '#7a4a9a'); px(c, 0, 0, -0.2, -3.6, 2.6, 2.2, '#e8dcc0'); }
+  if (w === 'wrench') { px(c, 0, 0, 0, -6.2, 1.3, 6, '#9aa4b4'); px(c, 0, 0, -1, -7.4, 3.4, 1.6, '#9aa4b4'); }
+  if (w === 'bow') { c.strokeStyle = '#8a6a3a'; c.lineWidth = S; c.beginPath(); c.arc(0, -3 * S, 7.4 * S, -1.15, 1.15); c.stroke(); c.strokeStyle = '#ddd'; c.lineWidth = 1; c.beginPath(); c.moveTo(2.6 * S, -9.6 * S); c.lineTo(2.6 * S, 3 * S); c.stroke(); }
+  if (w === 'lute') { px(c, 0, 0, -1, -5.4, 3, 4, '#a06a3a'); px(c, 0, 0, -0.2, -8.4, 1.2, 3.4, '#7a4a22'); }
+  c.restore();
+  c.restore();
+}
+
+// monsters: origin feet center; o:{kind,t,hit,taunt}
+function paintMonster(c, mx, my, o) {
+  c.save(); c.translate(mx, my);
+  const bounce = Math.sin(o.t / (o.kind === 'golem' ? 420 : 240)) * (o.kind === 'slime' ? 3 : 1.6) - (o.taunt ? 2.4 : 0);
+  const flash = o.hit && (performance.now() - o.hit) < 110;
+  const F = col => flash ? '#ffffff' : col;
+  c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(0, 2, o.kind === 'dragon' ? 34 : o.kind === 'golem' ? 26 : 18, 4, 0, 0, 7); c.fill();
+  const g = (x, y, w, h, col) => px(c, 0, bounce, x, y, w, h, F(col));
+  if (o.kind === 'slime') {
+    const sq = 1 + Math.sin(o.t / 240) * 0.12;
+    c.save(); c.scale(sq, 2 - sq);
+    px(c, 0, 0, -6, -7, 12, 7, F('#4caf50')); px(c, 0, 0, -5, -8.4, 10, 2, F('#66c96a'));
+    px(c, 0, 0, -3, -5.4, 1.6, 2, '#fff'); px(c, 0, 0, 1.6, -5.4, 1.6, 2, '#fff');
+    px(c, 0, 0, -2.6, -4.8, 1, 1.2, '#123'); px(c, 0, 0, 2, -4.8, 1, 1.2, '#123');
+    c.restore();
+  } else if (o.kind === 'goblin') {
+    g(-4, -4, 3, 4, '#4c6a2c'); g(1, -4, 3, 4, '#4c6a2c');
+    g(-5, -12, 10, 8, '#6a8f3c'); g(-4, -18, 8, 6, '#7ba24a');
+    g(-6.4, -17, 2, 3, '#7ba24a'); g(4.4, -17, 2, 3, '#7ba24a');
+    g(-2.4, -16, 1.4, 1.4, '#ffdf6a'); g(1.4, -16, 1.4, 1.4, '#ffdf6a');
+    g(4.6, -13, 2, 7, '#7a5a34'); g(4, -15, 3.2, 2.6, '#8a6a3a');
+  } else if (o.kind === 'golem') {
+    g(-5, -5, 4, 5, '#6f6f76'); g(1, -5, 4, 5, '#6f6f76');
+    g(-8, -15, 16, 10, '#8d8d93'); g(-6, -21, 12, 6, '#9d9da3');
+    g(-9.6, -14, 3, 8, '#7d7d83'); g(6.6, -14, 3, 8, '#7d7d83');
+    g(-3.4, -19, 2, 2, '#ff9d2e'); g(1.6, -19, 2, 2, '#ff9d2e');
+    g(-6, -12, 4, 1.4, '#6a6a70'); g(2, -9, 4, 1.4, '#6a6a70');
+  } else { // dragon
+    const wing = Math.sin(o.t / 180) * 5;
+    c.fillStyle = F('#8e2b20');
+    c.beginPath(); c.moveTo(-4 * S, -14 * S); c.lineTo((-16) * S, (-20 - wing) * S / 1.0); c.lineTo(-7 * S, -8 * S); c.fill();
+    c.beginPath(); c.moveTo(4 * S, -14 * S); c.lineTo(16 * S, (-20 + wing) * S / 1.0); c.lineTo(7 * S, -8 * S); c.fill();
+    g(-9, -12, 18, 9, '#b03a2e'); g(-12.6, -8.6, 4, 3, '#b03a2e');
+    g(5, -18, 8, 7, '#c1483a');
+    g(11.4, -16.4, 3, 2, '#ffd76a');
+    g(6.4, -19.8, 1.6, 2.4, '#e8dcc0'); g(9.4, -19.8, 1.6, 2.4, '#e8dcc0');
+    g(7.4, -15.6, 1.6, 1.6, '#ffdf3a');
+    g(-4, -3.6, 4, 3.6, '#8e2b20'); g(1, -3.6, 4, 3.6, '#8e2b20');
+  }
+  c.restore();
+}
+
+function paintDeco(c, d, now) {
+  const x = d.x * TILE, y = d.y * TILE;
+  if (d.t === 'tree') {
+    c.fillStyle = '#6d4c2f'; c.fillRect(x - 3, y - 12, 7, 13);
+    c.fillStyle = '#2f6d3a'; c.beginPath(); c.arc(x, y - 22, 15, 0, 7); c.fill();
+    c.fillStyle = '#3f8f4d'; c.beginPath(); c.arc(x - 5, y - 26, 9, 0, 7); c.fill();
+  } else if (d.t === 'rock') {
+    c.fillStyle = '#8d8d93'; c.beginPath(); c.arc(x, y - 4, 7, 0, 7); c.fill();
+    c.fillStyle = '#9d9da3'; c.fillRect(x - 4, y - 9, 5, 3);
+  } else if (d.t === 'flower') {
+    c.fillStyle = '#3f8f4d'; c.fillRect(x, y - 4, 2, 5);
+    c.fillStyle = ['#ffd76a', '#ff8a9a', '#c77dff'][Math.floor((d.x * 7 + d.y) % 3)]; c.fillRect(x - 2, y - 8, 6, 5);
+    c.fillStyle = '#fff'; c.fillRect(x, y - 6, 2, 2);
+  } else if (d.t === 'torch') {
+    c.fillStyle = '#6d4c2f'; c.fillRect(x - 2, y - 16, 4, 17);
+    const f = Math.sin(now / 90 + d.x * 3) * 2;
+    c.fillStyle = '#ff9d2e'; c.beginPath(); c.arc(x, y - 19 + f * 0.4, 5, 0, 7); c.fill();
+    c.fillStyle = '#ffdf3a'; c.beginPath(); c.arc(x, y - 20 + f * 0.4, 2.6, 0, 7); c.fill();
+    const grd = c.createRadialGradient(x, y - 18, 2, x, y - 18, 26);
+    grd.addColorStop(0, 'rgba(255,157,46,0.16)'); grd.addColorStop(1, 'rgba(255,157,46,0)');
+    c.fillStyle = grd; c.fillRect(x - 26, y - 44, 52, 52);
+  } else if (d.t === 'fire') {
+    c.fillStyle = '#5c4a32'; for (let i = 0; i < 5; i++) c.fillRect(x - 12 + i * 5.4, y - 2, 5, 4);
+    const f = Math.sin(now / 110) * 2.4;
+    c.fillStyle = '#ff7d2e'; c.beginPath(); c.arc(x, y - 8 - f * 0.4, 7, 0, 7); c.fill();
+    c.fillStyle = '#ffdf3a'; c.beginPath(); c.arc(x, y - 9 - f * 0.4, 3.4, 0, 7); c.fill();
+  } else if (d.t === 'stool') {
+    c.fillStyle = '#6d4c2f'; c.fillRect(x - 6, y - 6, 12, 4); c.fillRect(x - 5, y - 2, 2, 4); c.fillRect(x + 3, y - 2, 2, 4);
+  } else if (d.t === 'board') {
+    c.fillStyle = '#6d4c2f'; c.fillRect(x - 16, y - 26, 4, 27); c.fillRect(x + 12, y - 26, 4, 27);
+    c.fillStyle = '#8a6a3a'; c.fillRect(x - 18, y - 30, 36, 18);
+    c.strokeStyle = '#4a3a18'; c.strokeRect(x - 18, y - 30, 36, 18);
+    c.fillStyle = '#e8dcc0'; c.fillRect(x - 13, y - 27, 9, 11); c.fillRect(x + 2, y - 26, 9, 9);
+    c.fillStyle = '#a33'; c.fillRect(x - 12, y - 26, 3, 2); c.fillRect(x + 3, y - 25, 3, 2);
+    c.fillStyle = '#ffd76a'; c.font = 'bold 9px monospace'; c.textAlign = 'center'; c.fillText('QUESTS', x, y - 32); c.textAlign = 'left';
+  } else if (d.t === 'barrel') {
+    c.fillStyle = '#8a6a3a'; c.fillRect(x - 6, y - 12, 12, 12);
+    c.fillStyle = '#6d4c2f'; c.fillRect(x - 6, y - 9, 12, 2); c.fillRect(x - 6, y - 4, 12, 2);
+  } else if (d.t === 'dummy') {
+    c.fillStyle = '#6d4c2f'; c.fillRect(x - 2, y - 18, 4, 19);
+    c.fillRect(x - 9, y - 14, 18, 3);
+    c.fillStyle = '#c9a227'; c.beginPath(); c.arc(x, y - 21, 5, 0, 7); c.fill();
+    c.fillStyle = '#8a6a3a'; c.beginPath(); c.arc(x, y - 21, 2.4, 0, 7); c.fill();
+  }
+}
+
+// ---------- particles & floaters ----------
+const parts = [];   // {x,y,vx,vy,life,age,col,sz}
+const floats = [];  // {x,y,text,col,age,life,big}
+function burst(x, y, col, n, spread) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = (0.4 + Math.random()) * (spread || 1);
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.6, life: 500 + Math.random() * 400, age: 0, col, sz: 2 + Math.random() * 3 });
+  }
+}
+function dmgFloat(x, y, dmg, crit) {
+  floats.push({ x: x + (Math.random() * 20 - 10), y: y - 40, text: crit ? `${dmg} CRIT!` : String(dmg), col: crit ? '#ffd76a' : '#fff', age: 0, life: crit ? 1300 : 950, big: crit });
+}
+
+// ---------- battle log ----------
+const logLines = [];
+function blog(line) {
+  logLines.push(line);
+  if (logLines.length > 60) logLines.shift();
+  const el = document.getElementById('tickerLines');
+  el.innerHTML = logLines.slice(-3).map(l => `<div>${esc(l)}</div>`).join('');
+}
+blog('The guild doors creak open… heroes report for duty.');
+
+// ---------- entities ----------
+const heroes = new Map();   // sessionId -> hero
+const HALL_DOOR = { x: 9.9 * TILE, y: 10.6 * TILE };
+
+function makeHero(s) {
+  return {
+    id: s.sessionId, cls: classOf(s.customRole || s.role), color: (s.persona && s.persona.color) || '#5b8cff',
+    name: s.name || 'Hero', x: HALL_DOOR.x, y: HALL_DOOR.y,
+    tx: HALL_DOOR.x, ty: HALL_DOOR.y, facing: 1, mode: 'toRest', site: null, spot: null,
+    attackStart: 0, autoNext: performance.now() + 1500 + Math.random() * 1500,
+    tokens: 0, gold: 0, lvl: 1, xp: 0, quest: '', activity: '', waiting: false, ping: 0,
+    monster: null, // {kind,label,name,hp,maxHp,t0,hit,taunt}
+  };
+}
+
+const siteOwner = new Array(SITES.length).fill(null);
+const restOwner = new Array(REST_SPOTS.length).fill(null);
+const boardOwner = new Array(BOARD_SPOTS.length).fill(null);
+const dummyOwner = new Array(DUMMY_SPOTS.length).fill(null);
+function claim(arr, id) { let i = arr.indexOf(id); if (i >= 0) return i; i = arr.indexOf(null); if (i >= 0) arr[i] = id; return i; }
+function release(arr, id) { const i = arr.indexOf(id); if (i >= 0) arr[i] = null; }
+function releaseAll(id) { release(siteOwner, id); release(restOwner, id); release(boardOwner, id); release(dummyOwner, id); }
+
+function spawnMonster(h, s) {
+  const tier = monsterTier((s.tokens && s.tokens.total) || 0);
+  h.monster = { kind: tier.kind, label: tier.label, name: `the ${projName(s)} ${tier.label}`, hp: tier.hp, maxHp: tier.hp, t0: performance.now(), hit: 0, taunt: false };
+}
+
+function syncHeroes(list) {
+  const byPrio = [...list].sort((a, b) => {
+    const p = s => s.needsAttention ? 0 : (['working', 'thinking', 'starting'].includes(s.state) ? 0 : 2);
+    return p(a) - p(b) || new Date(b.lastActivity) - new Date(a.lastActivity);
+  }).slice(0, 16);
+  const present = new Set(byPrio.map(s => s.sessionId));
+
+  // departures
+  for (const [id, h] of heroes) {
+    if (!present.has(id)) { blog(`${h.name} departs the guild…`); releaseAll(id); heroes.delete(id); }
+  }
+
+  for (const s of byPrio) {
+    let h = heroes.get(s.sessionId);
+    const isNew = !h;
+    if (isNew) { h = makeHero(s); heroes.set(s.sessionId, h); }
+    // refresh data
+    h.name = s.name || h.name;
+    h.cls = classOf(s.customRole || s.role);
+    h.color = (s.persona && s.persona.color) || h.color;
+    h.tokens = (s.tokens && s.tokens.total) || 0;
+    h.gold = (s.labor && s.labor.cost) || 0;
+    const wasLvl = h.lvl;
+    h.lvl = levelOf(h.tokens); h.xp = xpProgress(h.tokens);
+    if (!isNew && h.lvl > wasLvl) { blog(`✨ ${h.name} reached Lv.${h.lvl}!`); burst(h.x, h.y - 30, '#ffd76a', 24, 1.4); }
+    h.quest = s.task || projName(s);
+    h.activity = s.activity || '';
+    const active = ['working', 'thinking', 'starting'].includes(s.state);
+    const waiting = !!s.needsAttention;
+    if (isNew) blog(`⚔ ${h.name} the ${h.cls.title} joins the guild! (Lv.${h.lvl})`);
+
+    // --- mode decisions ---
+    if (waiting) {
+      if (!h.waiting) blog(`⚠ ${h.name} calls for their master!`);
+      h.waiting = true;
+      if (h.site == null) { // no battle in progress: wait at the quest board
+        release(restOwner, h.id); release(dummyOwner, h.id);
+        const b = claim(boardOwner, h.id);
+        if (b >= 0) { h.spot = b; h.setTarget = { x: (BOARD_SPOTS[b][0]) * TILE, y: BOARD_SPOTS[b][1] * TILE, mode: 'waitBoard' }; }
+      } else h.mode = 'waitSite';
+      if (h.monster) h.monster.taunt = true;
+    } else if (active) {
+      h.waiting = false;
+      release(restOwner, h.id); release(boardOwner, h.id);
+      let si = claim(siteOwner, h.id);
+      if (si >= 0) {
+        if (h.site !== si || !h.monster) {
+          h.site = si;
+          if (!h.monster) spawnMonster(h, s);
+          if (isNew || h.mode !== 'fight') blog(`${h.name} embarks: «${String(h.quest).slice(0, 44)}» — ${h.monster.name} appears!`);
+        }
+        const st = SITES[si];
+        h.setTarget = { x: (st.x - 1.3) * TILE, y: st.y * TILE, mode: 'fight' };
+        if (h.monster) h.monster.taunt = false;
+      } else { // overflow: train at a dummy
+        release(siteOwner, h.id); h.site = null; h.monster = null;
+        const di = claim(dummyOwner, h.id);
+        const [dx, dy] = di >= 0 ? DUMMY_SPOTS[di] : [18 + Math.random() * 4, 16];
+        h.setTarget = { x: dx * TILE, y: dy * TILE, mode: 'train' };
+      }
+    } else { // idle
+      if (h.mode === 'fight' && h.monster) {
+        blog(`🏆 ${h.name} banks quest progress (+${Math.round(h.gold)}g)`);
+        burst(h.x + 2.6 * TILE, h.y, '#ffd76a', 26, 1.6);
+      }
+      h.waiting = false;
+      release(siteOwner, h.id); release(boardOwner, h.id); release(dummyOwner, h.id);
+      h.site = null; h.monster = null;
+      const ri = claim(restOwner, h.id);
+      const [rx, ry] = ri >= 0 ? REST_SPOTS[ri] : [17 + (Math.random() * 10), 11.4];
+      h.setTarget = { x: rx * TILE, y: ry * TILE, mode: 'rest' };
+    }
+  }
+  updateHUD(list);
+  updateQuestPanel();
+}
+
+// battle actions from live tool events
+const TOOL_FLAVOR = [
+  [/edit|write|notebook/, (h, m) => `${h.name} strikes ${m} with the Refactor Blade`],
+  [/bash|shell|powershell/, (h, m) => `${h.name} casts Terminal Incantation at ${m}`],
+  [/read/, (h) => `${h.name} studies the ancient scrolls…`],
+  [/grep|glob|search/, (h) => `${h.name} scours the dungeon archives…`],
+  [/task|agent/, (h) => `${h.name} summons an apprentice!`],
+  [/webfetch|websearch|fetch/, (h) => `${h.name} consults the Oracle`],
+  [/todo/, (h) => `${h.name} updates the quest journal`],
+];
+function battleAction(sessionId, tool) {
+  const h = heroes.get(sessionId);
+  if (!h) return;
+  h.attackStart = performance.now();
+  const heavy = /edit|write|bash|shell|powershell|notebook/i.test(tool || '');
+  const dmg = Math.round((heavy ? 600 : 150) + Math.random() * (heavy ? 2600 : 700));
+  const crit = Math.random() < 0.1;
+  const mName = h.monster ? h.monster.name : 'the training dummy';
+  const fl = TOOL_FLAVOR.find(([re]) => re.test((tool || '').toLowerCase()));
+  let line = fl ? fl[1](h, mName) : `${h.name} attacks ${mName}`;
+  if (heavy || !fl) line += ` — ${dmg}${crit ? ' CRIT' : ''} dmg!`;
+  blog(line);
+  if (h.monster) {
+    h.monster.hp = Math.max(h.monster.maxHp * 0.06, h.monster.hp - (crit ? dmg * 2 : dmg));
+    h.monster.hit = performance.now();
+    const st = SITES[h.site];
+    if (st) { dmgFloat((st.x + 1.3) * TILE, st.y * TILE, dmg, crit); burst((st.x + 1.3) * TILE, st.y * TILE - 24, crit ? '#ffd76a' : '#fff', crit ? 16 : 8, 1.2); }
+  } else {
+    dmgFloat(h.x + TILE, h.y - 6, dmg, crit);
+  }
+}
+
+// ---------- HUD + quest panel ----------
+function updateHUD(list) {
+  let gold = 0, mana = 0, quests = 0;
+  for (const s of list) {
+    gold += (s.labor && s.labor.cost) || 0;
+    mana += (s.tokens && s.tokens.total) || 0;
+    if (['working', 'thinking', 'starting'].includes(s.state) || s.needsAttention) quests++;
+  }
+  document.getElementById('h-gold').textContent = Math.round(gold).toLocaleString() + 'g';
+  document.getElementById('h-mana').textContent = fmt(mana);
+  document.getElementById('h-heroes').textContent = heroes.size;
+  document.getElementById('h-quests').textContent = quests;
+}
+function updateQuestPanel() {
+  const el = document.getElementById('questList');
+  const rows = [...heroes.values()].sort((a, b) => (a.waiting ? -1 : a.mode === 'fight' ? 0 : 1) - (b.waiting ? -1 : b.mode === 'fight' ? 0 : 1));
+  el.innerHTML = rows.map(h => {
+    const st = h.waiting ? ['wait', '⏳ needs you!'] : (h.mode === 'fight' || h.mode === 'train') ? ['fight', '⚔ on quest'] : ['rest', '🍺 at the inn'];
+    return `<div class="qrow" data-id="${esc(h.id)}">
+      <div class="qh"><div class="qemb" style="background:${h.color}">${h.cls.icon}</div>
+        <div style="min-width:0"><div class="qname">${esc(h.name)} <span style="color:#c9a227">Lv.${h.lvl}</span></div>
+        <div class="qsub">${h.cls.title}</div></div></div>
+      <div class="qquest" title="${esc(h.quest)}">📜 ${esc(String(h.quest).slice(0, 46))}</div>
+      <div class="qxp"><i style="width:${Math.round(h.xp * 100)}%"></i></div>
+      <div class="qfoot"><span class="qstate ${st[0]}">${st[1]}</span><span class="qgold">${Math.round(h.gold)}g</span></div>
+    </div>`;
+  }).join('') || '<div style="color:#8a7a56;font-size:12px;text-align:center;padding:20px">No heroes in the guild yet…</div>';
+  el.querySelectorAll('.qrow').forEach(r => {
+    r.onclick = () => {
+      const h = heroes.get(r.dataset.id);
+      if (h) { h.ping = performance.now(); }
+      fetch('/focus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: r.dataset.id }) }).catch(() => {});
+    };
+  });
+}
+
+// ---------- main loop ----------
+let last = performance.now();
+function tick(now) {
+  const dt = Math.min(50, now - last); last = now;
+
+  // movement + auto-attacks
+  for (const h of heroes.values()) {
+    if (h.setTarget) {
+      h.tx = h.setTarget.x; h.ty = h.setTarget.y; h.nextMode = h.setTarget.mode; h.setTarget = null;
+      if (dist(h.x, h.y, h.tx, h.ty) > 4) h.mode = 'walk';
+      else h.mode = h.nextMode;
+    }
+    if (h.mode === 'walk') {
+      const d = dist(h.x, h.y, h.tx, h.ty), sp = 0.09 * dt;
+      if (d <= sp) { h.x = h.tx; h.y = h.ty; h.mode = h.nextMode || 'rest'; }
+      else { h.facing = h.tx >= h.x ? 1 : -1; h.x += (h.tx - h.x) / d * sp; h.y += (h.ty - h.y) / d * sp; }
+    } else if (h.mode === 'fight' || h.mode === 'train') {
+      h.facing = 1;
+      if (now > h.autoNext) { h.attackStart = now; h.autoNext = now + 1400 + Math.random() * 1400;
+        if (h.monster) { h.monster.hit = now; h.monster.hp = Math.max(h.monster.maxHp * 0.06, h.monster.hp - (40 + Math.random() * 220)); }
+      }
+    }
+    if (h.monster) h.monster.hp = Math.min(h.monster.maxHp, h.monster.hp + dt * 0.02); // monsters slowly regenerate
+  }
+
+  // ---- draw ----
+  ctx.drawImage(base, 0, 0);
+  // animated water
+  for (let y = 19; y <= 24; y++) for (let x = 3; x <= 9; x++) if (grid[y][x] === T.WATER) {
+    const px0 = x * TILE, py0 = y * TILE;
+    ctx.fillStyle = '#2f6db8'; ctx.fillRect(px0, py0, TILE, TILE);
+    ctx.fillStyle = 'rgba(102,183,255,0.55)';
+    const ph = (x * 13 + y * 7);
+    ctx.fillRect(px0 + 4 + Math.sin(now / 600 + ph) * 3, py0 + 8, 10, 2);
+    ctx.fillRect(px0 + 14 + Math.cos(now / 700 + ph) * 3, py0 + 22, 8, 2);
+  }
+
+  // entity draw list (y-sorted): deco + heroes + monsters
+  const items = [];
+  for (const d of deco) items.push({ y: d.y * TILE, draw: () => paintDeco(ctx, d, now) });
+  for (const h of heroes.values()) {
+    items.push({ y: h.y, draw: () => drawHero(h, now) });
+    if (h.monster && h.site != null) {
+      const st = SITES[h.site];
+      items.push({ y: st.y * TILE + 1, draw: () => drawMonster(h, st, now) });
+    }
+  }
+  items.sort((a, b) => a.y - b.y);
+  for (const it of items) it.draw();
+
+  // particles
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.age += dt;
+    if (p.age > p.life) { parts.splice(i, 1); continue; }
+    p.x += p.vx * dt * 0.06; p.y += p.vy * dt * 0.06; p.vy += 0.002 * dt;
+    ctx.globalAlpha = 1 - p.age / p.life;
+    ctx.fillStyle = p.col; ctx.fillRect(p.x, p.y, p.sz, p.sz);
+    ctx.globalAlpha = 1;
+  }
+  // damage floaters
+  ctx.textAlign = 'center';
+  for (let i = floats.length - 1; i >= 0; i--) {
+    const f = floats[i]; f.age += dt;
+    if (f.age > f.life) { floats.splice(i, 1); continue; }
+    const k = f.age / f.life;
+    ctx.globalAlpha = 1 - k * k;
+    ctx.font = `bold ${f.big ? 20 : 14}px monospace`;
+    ctx.fillStyle = '#000'; ctx.fillText(f.text, f.x + 1, f.y - k * 34 + 1);
+    ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, f.y - k * 34);
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = 'left';
+
+  // day/night tint
+  const hr = new Date().getHours();
+  if (hr >= 20 || hr < 6) { ctx.fillStyle = 'rgba(12,16,48,0.34)'; ctx.fillRect(0, 0, WORLD_W, WORLD_H); }
+  else if (hr >= 17) { ctx.fillStyle = 'rgba(48,24,32,0.16)'; ctx.fillRect(0, 0, WORLD_W, WORLD_H); }
+
+  requestAnimationFrame(tick);
+}
+
+function drawHero(h, now) {
+  const attackT = h.attackStart ? clamp((now - h.attackStart) / 320, 0, 1) : null;
+  paintHero(ctx, h.x, h.y, {
+    cls: h.cls, color: h.color, facing: h.facing,
+    walk: h.mode === 'walk', t: now, kneel: h.waiting && h.mode !== 'walk',
+    attackT: attackT != null && attackT < 1 ? attackT : null,
+  });
+  // name tag + level
+  ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+  const label = `${h.name} Lv.${h.lvl}`;
+  const w = ctx.measureText(label).width + 10;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillRect(h.x - w / 2, h.y - 74, w, 13);
+  ctx.fillStyle = h.color; ctx.fillText(h.name, h.x - 14, h.y - 64);
+  ctx.fillStyle = '#ffd76a'; ctx.fillText(`Lv.${h.lvl}`, h.x + w / 2 - 18, h.y - 64);
+  ctx.textAlign = 'left';
+  // xp sliver
+  ctx.fillStyle = '#241c10'; ctx.fillRect(h.x - w / 2, h.y - 61, w, 2);
+  ctx.fillStyle = '#ffd76a'; ctx.fillRect(h.x - w / 2, h.y - 61, w * h.xp, 2);
+  // waiting "!"
+  if (h.waiting) {
+    const b = Math.abs(Math.sin(now / 260)) * 5;
+    ctx.fillStyle = '#ffd76a'; ctx.fillRect(h.x - 5, h.y - 96 - b, 10, 14);
+    ctx.fillStyle = '#1a1408'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('!', h.x, h.y - 85 - b); ctx.textAlign = 'left';
+  }
+  // resting Zzz
+  if (h.mode === 'rest' && Math.floor(now / 900) % 3 === 0) {
+    ctx.fillStyle = 'rgba(232,220,192,0.8)'; ctx.font = '10px monospace';
+    ctx.fillText('z', h.x + 12, h.y - 70 - (now % 900) / 90);
+  }
+  // ping ring (quest-log click)
+  if (h.ping && now - h.ping < 2200) {
+    const k = ((now - h.ping) % 700) / 700;
+    ctx.strokeStyle = `rgba(255,215,106,${1 - k})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(h.x, h.y - 24, 12 + k * 26, 0, 7); ctx.stroke();
+  }
+  // activity bubble while fighting (occasional)
+  if ((h.mode === 'fight' || h.mode === 'train') && h.activity && Math.floor(now / 5200) % 3 === 0) {
+    ctx.font = '9px monospace';
+    const txt = h.activity.slice(0, 26);
+    const bw = ctx.measureText(txt).width + 10;
+    ctx.fillStyle = 'rgba(20,16,10,0.85)';
+    ctx.fillRect(h.x - bw / 2, h.y - 92, bw, 13);
+    ctx.strokeStyle = '#6b5220'; ctx.strokeRect(h.x - bw / 2, h.y - 92, bw, 13);
+    ctx.fillStyle = '#e8dcc0'; ctx.textAlign = 'center'; ctx.fillText(txt, h.x, h.y - 82); ctx.textAlign = 'left';
+  }
+}
+
+function drawMonster(h, st, now) {
+  const m = h.monster;
+  const mx = (st.x + 1.3) * TILE, my = st.y * TILE;
+  paintMonster(ctx, mx, my, { kind: m.kind, t: now - m.t0, hit: m.hit, taunt: m.taunt });
+  // hp bar + name
+  const bw = 62;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(mx - bw / 2, my - 78, bw, 5);
+  ctx.fillStyle = '#e3455a'; ctx.fillRect(mx - bw / 2 + 1, my - 77, (bw - 2) * clamp(m.hp / m.maxHp, 0, 1), 3);
+  ctx.font = '9px monospace'; ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  const nm = m.name.length > 26 ? m.name.slice(0, 25) + '…' : m.name;
+  ctx.fillRect(mx - ctx.measureText(nm).width / 2 - 4, my - 92, ctx.measureText(nm).width + 8, 12);
+  ctx.fillStyle = '#ffb3b3'; ctx.fillText(nm, mx, my - 83);
+  ctx.textAlign = 'left';
+  if (m.taunt) { // monster mocks the waiting hero
+    const b = Math.abs(Math.sin(now / 300)) * 4;
+    ctx.fillStyle = '#ff8a9a'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('?', mx + 18, my - 66 - b); ctx.textAlign = 'left';
+  }
+}
+
+// ---------- WebSocket ----------
+(function() {
+  if (location.protocol === 'file:') return;
+  const wsUrl = `ws://${location.hostname}:${location.port || 3456}`;
+  let ws;
+  function connect() {
+    ws = new WebSocket(wsUrl);
+    ws.onmessage = (e) => {
+      try {
+        const ev = JSON.parse(e.data);
+        if (ev.type === 'sessions') syncHeroes(ev.sessions || []);
+        else if (ev.type === 'tool_start') battleAction(ev.sessionId, ev.tool);
+      } catch {}
+    };
+    ws.onclose = () => setTimeout(connect, 2000);
+    ws.onerror = () => ws.close();
+  }
+  connect();
+  // initial fill before first WS broadcast
+  fetch('/sessions').then(r => r.json()).then(syncHeroes).catch(() => {});
+})();
+
+// ---------- chrome: splash, scanlines, embedded nav ----------
+const splash = document.getElementById('splash');
+function dismissSplash() { splash.classList.add('gone'); }
+splash.addEventListener('click', dismissSplash);
+setTimeout(dismissSplash, 3200);
+
+const crtBtn = document.getElementById('crtBtn');
+function paintCrt() { crtBtn.classList.toggle('toggled', localStorage.getItem('aihq-crt') === '1'); document.body.classList.toggle('scanlines', localStorage.getItem('aihq-crt') === '1'); }
+crtBtn.onclick = () => { localStorage.setItem('aihq-crt', localStorage.getItem('aihq-crt') === '1' ? '0' : '1'); paintCrt(); };
+paintCrt();
+
+(function() {
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'highlight-agent') { const h = heroes.get(e.data.id); if (h) h.ping = performance.now(); }
+  });
+  if (window.parent === window) return;
+  const MAP = { '/office': 'office', '/dashboard': 'panel', '/history': 'history' };
+  document.querySelectorAll('a.rpg-btn[href]').forEach(a => {
+    const view = MAP[a.getAttribute('href')];
+    if (!view) return;
+    a.addEventListener('click', (e) => { e.preventDefault(); parent.postMessage({ type: 'nav', view }, location.origin); });
+  });
+})();
+
+resize();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

@@ -18,6 +18,7 @@ The original AI HQ was a pixel office with one character per session. This versi
 | **Session grouping** | Sessions from the same workspace (host + IDE + folder) collapse into expandable **team cards** with aggregate tokens/cost/labor — no more 8 cards for one project |
 | **Status filter & triage** | Toggle the board by status — **Working / Waiting / Idle** — and one-click **Archive old** to sweep stale idle sessions off the board (kept in History) |
 | **Instant view switching** | An app shell keeps office, panel, and history mounted and live — toggling views is instant, WebSockets stay connected, office characters keep their desks. Card avatars jump straight to that agent in the office with a 📍 pin |
+| **⚔️ Guild of Agents (RPG)** (`/rpg`) | A full JRPG view of the same data: every session is a **hero** (class from role, level/XP from tokens), their task is a **quest**, working = **battling a monster** whose tier scales with the task (slime → goblin → golem → dragon), tool calls land as attacks in a live **battle log**, waiting agents kneel with a "!" — plus gold (labor) & mana (tokens) HUD, quest log, splash screen, and a CRT scanline toggle |
 | **History** (`/history`) | Lifetime stat tiles, SVG trend charts (tokens / cost / sessions over time), and a sortable **per-session archive** that survives clearing the board |
 | **Cost & labor accounting** | Infers a role per session → salary → hourly rate → **labor value** from active work time; API cost estimated from the transcript |
 | **"Needs you" alerts** | Pulsing banner, chime, OS notification, and tab-title badge when an agent finishes or asks for input (with mute) |
@@ -37,6 +38,10 @@ The original AI HQ was a pixel office with one character per session. This versi
 ### History — trends over time + per-session archive
 ![History](aihq-history.png)
 
+### ⚔️ Guild of Agents — the RPG view (`/rpg`)
+Heroes battle project monsters while tool calls stream into the battle log. Priya (Lv.31) is fighting *the ai-hq Dragon*; Lola casts *Terminal Incantation* on a Golem.
+![Guild of Agents RPG](aihq-rpg.png)
+
 ### Pixel Office — the original real-time office view (`/`)
 ![Pixel Office](screenshot.png)
 
@@ -51,7 +56,7 @@ npm install
 node server.js
 ```
 
-The server listens on **http://localhost:3456** (and prints your network URL). It serves three views inside a persistent app shell:
+The server listens on **http://localhost:3456** (and prints your network URL). It serves four views inside a persistent app shell:
 
 | URL | View |
 | --- | --- |
@@ -59,6 +64,7 @@ The server listens on **http://localhost:3456** (and prints your network URL). I
 | `/office` | Pixel-art office (standalone) |
 | `/dashboard` | Control panel (standalone) |
 | `/history` | Trends + session archive (standalone) |
+| `/rpg` | ⚔️ Guild of Agents — RPG quest view (standalone; `/#rpg` inside the shell) |
 
 ### 2. Wire up Claude Code hooks
 

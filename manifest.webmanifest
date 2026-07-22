@@ -20,6 +20,7 @@
   "shortcuts": [
     { "name": "Office view", "short_name": "Office", "url": "/", "description": "Pixel-art office of live sessions" },
     { "name": "Control Panel", "short_name": "Panel", "url": "/#panel", "description": "Data dashboard of all sessions" },
-    { "name": "History", "short_name": "History", "url": "/#history", "description": "Historical trends & session archive" }
+    { "name": "History", "short_name": "History", "url": "/#history", "description": "Historical trends & session archive" },
+    { "name": "Guild of Agents (RPG)", "short_name": "RPG", "url": "/#rpg", "description": "RPG quest-world visualization of your agents" }
   ]
 }
