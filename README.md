@@ -1,147 +1,136 @@
-# AI HQ — Claude Code Control Panel
+# ⚔️ AgentQuest
 
-Real-time mission control for **every Claude Code session on your machine** — CLI, VS Code, and Claude Desktop, all at once. See who's working, what they're doing, what it's costing in API tokens, and what that work is *worth* in labor value — in a live dashboard, a pixel-art office, and a historical archive.
+**Mission control for your AI agents — as a JRPG.**
 
-![AI HQ Control Panel](aihq-dashboard.png)
+Every Claude Code session on your machine becomes a pixel-art **hero** in a living guild world: their task is a **quest**, working means **battling a monster** sized by the job, tool calls land as **attacks in a live battle log**, and the biggest project spawns a **☠ WORLD BOSS**. Behind the game sits a full **control panel** with cost & labor analytics, response-time tracking, durable history, and native notifications.
 
-> **This is a heavily extended fork.** It started as a pixel-office toy (see [Credits](#credits--inspiration)) and grew into a full control panel: cost & labor accounting, session grouping into teams, a history view with trend charts, cowork capture, and an installable desktop app (PWA).
+Zero build. Zero frameworks. One `npm start`.
+
+![AgentQuest — the quest world](aihq-rpg.png)
 
 ---
 
-## ✨ What this fork adds over the original
+## Why
 
-The original AI HQ was a pixel office with one character per session. This version keeps that **and** layers on a real control panel:
+If you run many AI agents in parallel, you have two problems:
 
-| Area | Added |
+1. **Awareness** — who's working, who's stuck, who's waiting on *you*, and what is all of it costing?
+2. **Caring** — dashboards are boring, so you stop looking at them.
+
+AgentQuest solves both: it's a real operations panel (cost, labor value, alerts, history, response-time analytics) wearing a 16-bit JRPG that makes you actually *want* to watch your agents work.
+
+## ✨ Features
+
+| | |
 | --- | --- |
-| **Control Panel** (`/dashboard`) | Rich per-session cards: persona name, live activity line, model, IDE, token breakdown (in/out/cache), API cost + cost breakdown, message count, uptime |
-| **Session grouping** | Sessions from the same workspace (host + IDE + folder) collapse into expandable **team cards** with aggregate tokens/cost/labor — no more 8 cards for one project |
-| **Status filter & triage** | Toggle the board by status — **Working / Waiting / Idle** — and one-click **Archive old** to sweep stale idle sessions off the board (kept in History) |
-| **Instant view switching** | An app shell keeps office, panel, and history mounted and live — toggling views is instant, WebSockets stay connected, office characters keep their desks. Card avatars jump straight to that agent in the office with a 📍 pin |
-| **⚔️ Guild of Agents (RPG)** (`/rpg`) | A full JRPG view of the same data: every session is a **hero** (class from role, level/XP from tokens), their task is a **quest**, working = **battling a monster** whose tier scales with the task (slime → goblin → golem → dragon), tool calls land as attacks in a live **battle log**, waiting agents kneel with a "!" — plus gold (labor) & mana (tokens) HUD, quest log, splash screen, and a CRT scanline toggle |
-| **RPG depth** | Same-workspace heroes form **parties** in battle formation vs a shared monster; the biggest token hoard spawns a **☠ WORLD BOSS** with its own banner + HP bar; finished quests trigger **victory sequences** (death animation, coin shower, fanfare); heroes earn **visible gear by level** (cape at 10, golden arms at 20, crown + aura at 30); monsters counterattack, attacks can comically **miss**, idle heroes swap **tavern gossip**, and an opt-in **chiptune SFX** engine scores it all |
-| **History** (`/history`) | Lifetime stat tiles, SVG trend charts (tokens / cost / sessions over time), and a sortable **per-session archive** that survives clearing the board |
-| **Cost & labor accounting** | Infers a role per session → salary → hourly rate → **labor value** from active work time; API cost estimated from the transcript |
-| **"Needs you" alerts** | Pulsing banner, chime, OS notification, and tab-title badge when an agent finishes or asks for input (with mute) |
-| **Question preview** | Waiting cards show the agent's **actual last message** (pulled from the transcript) with a live *waiting for 4m* timer — see what it's asking before you context-switch; click to expand the full text |
-| **Server-side notifications** | Native **Windows toasts** + optional **phone push** (ntfy.sh / Telegram / webhook) fired by the *server*, so alerts reach you with no browser open — plus a one-time reminder nag if an agent is still waiting after N minutes. Configure in ⚙ Settings, test with one click |
-| **Response-time analytics** | Every wait→response cycle is logged durably: median response time on the dashboard, and a History section with daily stats, wait-time buckets, ignored-alert counts, and a per-alert table — your real parallelism ceiling, measured |
-| **Click-to-focus** | Click a card to bring that session's terminal/IDE window to the front; Claude Desktop sessions open via `claude://resume` deep link |
-| **Two ingestion paths** | Hook-based capture for Claude **Code**, plus a log watcher for Claude Desktop **cowork** sessions (incl. VM sessions that can't post back). A `code` / `cowork` badge marks each |
-| **Installable app (PWA)** | Custom favicon/icons, web app manifest, service worker (offline app shell), and app shortcuts — install it as a standalone desktop window |
-| **Settings** | In-app gear: **Start with Windows** toggle (wires the autostart scripts) and **Install as app** |
-| **Quality-of-life** | Rename any session, reassign its role, persona names that never collide, a stale-session sweep, and network access from other machines |
+| ⚔️ **Quest world** (`/`) | Heroes with classes (from inferred roles), levels & XP (from tokens), visible **gear progression** (cape → golden arms → crown + aura), **party formations** for same-project agents, monsters tiered slime → goblin → golem → dragon, a **world boss** with its own HP banner, victory fanfares & coin showers, comedy misses, tavern gossip, and an opt-in **chiptune SFX** engine |
+| 📜 **Hero sheets** | Click any hero (on the map or quest log) for their full status screen: current quest & live activity, the agent's **actual last message**, career stats (gold/mana/cost/uptime), **real tool usage as skill bars**, and their response-time record — plus focus-window and open-folder actions |
+| 📊 **Control panel** (`/#panel`) | Per-session cards: model, IDE, token breakdown, API cost, labor value, live activity. **Workspace grouping** into team cards, status filters, one-click **Archive old** |
+| 💬 **Question preview** | Waiting cards show what the agent is actually asking (transcript-extracted) with a live *waiting for Xm* timer |
+| 🔔 **Notifications** | Server-fired native **Windows toasts** + optional phone push (**ntfy.sh** / Telegram / webhook) — no browser needed — with a one-time reminder nag |
+| ⏱ **Response analytics** | Every wait→response cycle logged: median response time, wait-time buckets, ignored-alert counts — your real parallelism ceiling, measured |
+| 📈 **History** (`/#history`) | Lifetime tiles, trend charts (tokens / cost / sessions), and a durable per-session archive that survives clearing the board |
+| 💰 **Cost & labor accounting** | API cost estimated from transcripts; each agent gets a role → salary → hourly rate → **labor value** of its active work |
+| 🤝 **Two ingestion paths** | Claude Code via hooks, plus Claude Desktop **cowork** sessions via a log watcher (badged `code` / `cowork`) |
+| 📱 **Installable (PWA)** | Manifest + service worker + icons: install it as a standalone desktop app window |
 
----
+### Control panel & history
 
-## 📸 Screenshots
-
-### Control Panel — grouped team cards, live cost & labor
-![Control Panel](aihq-dashboard.png)
-
-### History — trends over time + per-session archive
-![History](aihq-history.png)
-
-### ⚔️ Guild of Agents — the RPG view (`/rpg`)
-Heroes battle project monsters while tool calls stream into the battle log. A **☠ WORLD BOSS** banner tracks the biggest fight — here Priya (Lv.31, crowned at 30+) duels *the Dreaded ai-hq Dragon*, and her attack just comically missed ("the Dragon snickers").
-![Guild of Agents RPG](aihq-rpg.png)
-
-### Pixel Office — the original real-time office view (`/`)
-![Pixel Office](screenshot.png)
+![Control panel](aihq-dashboard.png)
+![History & response analytics](aihq-history.png)
 
 ---
 
 ## 🚀 Quick start
 
-### 1. Install & run
+Requirements: **Node 18+**, and [Claude Code](https://claude.com/claude-code) (any surface: CLI, VS Code, Claude Desktop).
 
 ```bash
+git clone https://github.com/Kapala-Solutions/ai-control-panel.git agentquest
+cd agentquest
 npm install
-node server.js
+npm run setup     # wires the Claude Code hooks into ~/.claude/settings.json (backup + merge, idempotent)
+npm start
 ```
 
-The server listens on **http://localhost:3456** (and prints your network URL). It serves four views inside a persistent app shell:
+Open **http://localhost:3456**, restart your Claude Code sessions, and watch your agents walk into the guild.
 
-| URL | View |
-| --- | --- |
-| `/` | **App shell** — office, panel, and history all stay mounted and live; switching is instant (no reloads). Office shows first; `/#panel` and `/#history` deep-link the other tabs |
-| `/office` | Pixel-art office (standalone) |
-| `/dashboard` | Control panel (standalone) |
-| `/history` | Trends + session archive (standalone) |
-| `/rpg` | ⚔️ Guild of Agents — RPG quest view (standalone; `/#rpg` inside the shell) |
+That's it. `npm run setup` merges seven hook entries (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, Notification, SessionEnd) into your `~/.claude/settings.json` — it backs the file up first, keeps your existing hooks, and can be re-run safely. Prefer to see it first? `npm run setup -- --dry`.
 
-### 2. Wire up Claude Code hooks
+<details>
+<summary>Manual hook setup (if you'd rather paste JSON yourself)</summary>
 
-Add these to `~/.claude/settings.json` so every Claude Code session reports in. Replace the path with wherever this repo lives:
+Each hook runs `send-event.ps1`, which reads the hook payload from stdin and POSTs it to the server. Add to `~/.claude/settings.json`, replacing `<PATH>` with this repo's absolute path:
 
 ```jsonc
 {
   "hooks": {
-    "SessionStart":     [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type SessionStart     -Server 'http://127.0.0.1:3456'\"" }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type UserPromptSubmit -Server 'http://127.0.0.1:3456'\"" }] }],
-    "PreToolUse":       [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type PreToolUse  -Server 'http://127.0.0.1:3456'\"" }] }],
-    "PostToolUse":      [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type PostToolUse -Server 'http://127.0.0.1:3456'\"" }] }],
-    "Stop":             [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type Stop         -Server 'http://127.0.0.1:3456'\"" }] }],
-    "Notification":     [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type Notification -Server 'http://127.0.0.1:3456'\"" }] }],
-    "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<AI_HQ_PATH>/send-event.ps1' -Type SessionEnd   -Server 'http://127.0.0.1:3456'\"" }] }]
+    "SessionStart":     [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<PATH>/send-event.ps1' -Type SessionStart -Server 'http://127.0.0.1:3456'\"" }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<PATH>/send-event.ps1' -Type UserPromptSubmit -Server 'http://127.0.0.1:3456'\"" }] }],
+    "PreToolUse":       [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<PATH>/send-event.ps1' -Type PreToolUse -Server 'http://127.0.0.1:3456'\"" }] }],
+    "PostToolUse":      [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<PATH>/send-event.ps1' -Type PostToolUse -Server 'http://127.0.0.1:3456'\"" }] }],
+    "Stop":             [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<PATH>/send-event.ps1' -Type Stop -Server 'http://127.0.0.1:3456'\"" }] }],
+    "Notification":     [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<PATH>/send-event.ps1' -Type Notification -Server 'http://127.0.0.1:3456'\"" }] }],
+    "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '<PATH>/send-event.ps1' -Type SessionEnd -Server 'http://127.0.0.1:3456'\"" }] }]
   }
 }
 ```
+</details>
 
-`send-event.ps1` reads the hook payload from stdin (real session id, cwd, transcript path, tool target, notification message, IDE) and POSTs it to the server. Because these hooks live in the **global** settings file, every IDE and CLI session is covered automatically. Restart Claude Code after adding them.
+### Optional extras
 
-### 3. (Optional) Start with Windows & install as an app
-
-- Open **⚙ Settings** in the panel and flip **Start with Windows** — or run `install-autostart.ps1` directly. It drops a hidden launcher in your Startup folder.
-- Click **Install as app** (or your browser's install button) to run AI HQ as a standalone desktop window.
+- **Start with Windows** — flip the toggle in ⚙ Settings (or run `install-autostart.ps1`); the server launches hidden on login.
+- **Install as an app** — ⚙ Settings → *Install as app* for a dedicated desktop window.
+- **Phone push** — install the free [ntfy](https://ntfy.sh) app, subscribe to a secret topic, paste it in ⚙ Settings, hit *Test*.
 
 ---
+
+## 🗺 The views
+
+| URL | View |
+| --- | --- |
+| `/` | **Quest world** — the JRPG (default). `/#panel` and `/#history` deep-link the other tabs; all three stay mounted, so switching is instant |
+| `/dashboard` | Control panel (standalone) |
+| `/history` | History & response analytics (standalone) |
+| `/rpg` | Quest world (standalone) |
+
+`/?agent=<sessionId>` jumps straight to that hero and opens their sheet.
 
 ## 🧠 How it works
 
 ```
 Claude Code hooks ─┐
-(send-event.ps1)   │
-                   ├──▶  server.js (:3456)  ──▶  WebSocket  ──▶  /  · /dashboard · /history
-Claude Desktop     │        · session store          broadcast
-main.log watcher ──┘        · transcript parse (tokens/cost/model)
-(desktop-watcher.js)        · role → labor value
-                            · history.csv + sessions-history.jsonl
+(send-event.ps1)   ├──▶  server.js (:3456)  ──▶  WebSocket  ──▶  quest world · panel · history
+Claude Desktop     │        · session store & personas
+main.log watcher ──┘        · transcript parsing (tokens, cost, model, last message)
+(desktop-watcher.js)        · roles → labor value  · response-time log
+                            · history.csv · sessions-history.jsonl · responses.jsonl
+                            · native toasts (notify.ps1) + ntfy/Telegram/webhook push
 ```
 
-- **Two sources feed one store.** Claude Code fires hooks; Claude Desktop **cowork** sessions (which may run in a VM that can't reach the host) are picked up by tailing the desktop app's `main.log`. Sessions merge by id and carry a `code` / `cowork` source badge.
-- **The server is authoritative.** It parses each session's transcript for accurate tokens/cost/model, assigns a stable persona, computes a live activity line, and persists state.
-- **History is durable.** Aggregate snapshots append to `history.csv`; every finished (or cleared) session is archived to `sessions-history.jsonl` so nothing is lost.
-
----
+Plain Node, no build step, one dependency (`ws`). All state is human-readable files next to the server.
 
 ## ⚙️ Configuration — `config.json`
 
 ```jsonc
 {
   "port": 3456,
-  "autoStart": true,
   "staleMinutes": 15,      // mark a quiet session "idle" after N minutes
   "abandonMinutes": 45,    // drop a stuck "needs you" alert after N minutes
-  "watchDesktop": true,    // set false to disable the cowork log watcher
-  // "desktopLogPath": "…" // override the Claude Desktop main.log location
+  "watchDesktop": true,    // Claude Desktop cowork log watcher
   "notify": {
-    "toast": true,          // native Windows toasts from the server
-    "stops": true,          // also alert on turn-end ("your turn"); false = only explicit input requests
-    "remindMinutes": 10,    // nag once if an agent is still waiting after N minutes (0 = off)
-    "ntfyTopic": "",        // phone push: install the free ntfy app, subscribe to a secret topic, put it here
-    "telegramToken": "",    // or a Telegram bot…
+    "toast": true,          // native Windows toasts
+    "stops": true,          // also alert on turn-end ("your turn"), not just input requests
+    "remindMinutes": 10,    // nag once if still waiting after N minutes (0 = off)
+    "ntfyTopic": "",        // phone push via ntfy.sh
+    "telegramToken": "",    // …or a Telegram bot
     "telegramChatId": "",
-    "webhookUrl": ""        // or any JSON webhook: {app, title, body}
+    "webhookUrl": ""        // …or any JSON webhook {app, title, body}
   }
 }
 ```
 
-The port can also be overridden with the `PORT` environment variable.
-
-> ⚠️ If you use phone push, treat the ntfy topic / Telegram token as secrets — anyone who knows an ntfy topic can read its messages. Pick a long random topic name, and think twice before committing `config.json` to a public repo.
-
----
+> ⚠️ Treat push credentials as secrets: anyone who knows an ntfy topic can read it. Use a long random topic name, and don't commit a private `config.json` to a public fork.
 
 ## 🔌 HTTP API
 
@@ -149,20 +138,25 @@ The port can also be overridden with the `PORT` environment variable.
 | --- | --- | --- |
 | `GET` | `/sessions` | All sessions (JSON) |
 | `GET` | `/history.csv` | Aggregate time-series |
-| `GET` | `/history/sessions` | Per-session archive + live sessions (merged, deduped) |
-| `GET` | `/responses` | Wait→response log (who waited, how long, how it resolved) |
-| `GET`/`POST` | `/notify-config` | Read / update notification settings |
-| `POST` | `/notify-test` | Fire a test notification through every enabled channel |
-| `GET` | `/roles` | Role list + salary table |
-| `GET` | `/autostart` · `POST` `/autostart` | Read / toggle "Start with Windows" |
+| `GET` | `/history/sessions` | Per-session archive + live sessions (merged) |
+| `GET` | `/responses` | Wait→response log |
+| `GET`/`POST` | `/notify-config` · `POST /notify-test` | Notification settings / test |
+| `GET`/`POST` | `/autostart` | Read / toggle "Start with Windows" |
 | `POST` | `/event` | Hook event ingestion |
-| `POST` | `/focus` | Bring a session's window to front |
-| `POST` | `/rename` · `/role` · `/clear` | Rename, set role, clear sessions |
+| `POST` | `/focus` · `/open-folder` | Focus a session's window / open its folder |
+| `POST` | `/rename` · `/role` · `/clear` | Rename, set role, archive sessions |
 
----
+## 🖥 Platform notes
 
-## Credits & Inspiration
+- **Windows**: everything works — event capture, window focus, native toasts, autostart.
+- **macOS / Linux**: the server and all views run fine; event capture works if [PowerShell 7 (`pwsh`)](https://github.com/PowerShell/PowerShell) is installed (`npm run setup` uses it automatically). Window-focus, toasts, and autostart are Windows-only today — phone push (ntfy/Telegram/webhook) works everywhere. PRs welcome.
 
-Built upon [**jaysonbrush/ai-hq**](https://github.com/jaysonbrush/ai-hq) — huge thanks to Jayson for the original AI HQ implementation this control panel grew from.
+## 🤝 Contributing
 
-The original AI HQ was itself inspired by [PixelHQ](https://www.reddit.com/r/ClaudeCode/comments/1qrbsfa/i_built_a_pixel_office_that_animates_in_realtime/) by [u/Waynedevvv](https://www.reddit.com/user/Waynedevvv/) — a mobile app that does the same concept on your phone. Check out the original if you want a native iOS experience!
+Issues and PRs are very welcome. The codebase is deliberately simple: one Node server (`server.js`), standalone HTML views (`rpg.html`, `dashboard.html`, `history.html`, `app.html` shell), and pure-canvas procedural pixel art — no build pipeline to fight. Fun starter ideas: more monster types, hero pets, weather, quest scoreboards, macOS focus/notification support.
+
+## 📜 License & credits
+
+[MIT](LICENSE) © Kapala Solutions.
+
+Lineage: started as a fork of [jaysonbrush/ai-hq](https://github.com/jaysonbrush/ai-hq) (a pixel-office toy inspired by [PixelHQ](https://www.reddit.com/r/ClaudeCode/comments/1qrbsfa/)); since rebuilt from the ground up into the product you see here.

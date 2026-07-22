@@ -1,16 +1,16 @@
 {
-  "name": "AI HQ — Claude Code Control Panel",
-  "short_name": "AI HQ",
-  "description": "Real-time control panel and pixel-art office for your Claude Code sessions.",
+  "name": "AgentQuest — mission control for your AI agents",
+  "short_name": "AgentQuest",
+  "description": "Watch your Claude Code agents battle their quests in a live JRPG world, with a full control panel, cost & labor analytics, and history behind it.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "any",
-  "background_color": "#1a1a2e",
-  "theme_color": "#1a1a2e",
-  "categories": ["productivity", "developer", "utilities"],
+  "background_color": "#0a0c12",
+  "theme_color": "#0a0c12",
+  "categories": ["productivity", "developer", "utilities", "games"],
   "icons": [
     { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
     { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
@@ -18,9 +18,8 @@
     { "src": "/icon-512-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Office view", "short_name": "Office", "url": "/", "description": "Pixel-art office of live sessions" },
+    { "name": "Quest world", "short_name": "Quest", "url": "/", "description": "The live JRPG view of your agents" },
     { "name": "Control Panel", "short_name": "Panel", "url": "/#panel", "description": "Data dashboard of all sessions" },
-    { "name": "History", "short_name": "History", "url": "/#history", "description": "Historical trends & session archive" },
-    { "name": "Guild of Agents (RPG)", "short_name": "RPG", "url": "/#rpg", "description": "RPG quest-world visualization of your agents" }
+    { "name": "History", "short_name": "History", "url": "/#history", "description": "Trends, response times & session archive" }
   ]
 }

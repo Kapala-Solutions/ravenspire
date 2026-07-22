@@ -135,7 +135,7 @@ function sendPush(title, body) {
   if (n.ntfyTopic) {
     // ntfy.sh: free push to iOS/Android; header values must be ASCII
     postHTTP(`https://ntfy.sh/${encodeURIComponent(n.ntfyTopic)}`,
-      { 'Content-Type': 'text/plain', 'Title': title.replace(/[^\x20-\x7E]/g, '').trim() || 'AI HQ', 'Tags': 'bell' },
+      { 'Content-Type': 'text/plain', 'Title': title.replace(/[^\x20-\x7E]/g, '').trim() || 'AgentQuest', 'Tags': 'bell' },
       body);
   }
   if (n.telegramToken && n.telegramChatId) {
@@ -663,12 +663,14 @@ const server = http.createServer((req, res) => {
     const startupDir = process.env.APPDATA
       ? path.join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
       : path.join(os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
-    const lnk = path.join(startupDir, 'AI HQ.lnk');
+    const lnk = path.join(startupDir, 'AgentQuest.lnk');
+    const legacyLnk = path.join(startupDir, 'AI HQ.lnk'); // pre-rename installs
+    const isEnabled = () => fs.existsSync(lnk) || fs.existsSync(legacyLnk);
     const reply = (obj, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
 
     if (req.method === 'GET') {
       if (process.platform !== 'win32') return reply({ ok: true, supported: false, enabled: false });
-      return reply({ ok: true, supported: true, enabled: fs.existsSync(lnk) });
+      return reply({ ok: true, supported: true, enabled: isEnabled() });
     }
     if (req.method === 'POST') {
       if (process.platform !== 'win32') return reply({ ok: false, supported: false, reason: 'Windows only' }, 400);
@@ -680,8 +682,8 @@ const server = http.createServer((req, res) => {
         const script = path.join(__dirname, enabled ? 'install-autostart.ps1' : 'uninstall-autostart.ps1');
         execFile('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script],
           { timeout: 15000 }, (err, stdout, stderr) => {
-            if (err) return reply({ ok: false, enabled: fs.existsSync(lnk), error: (stderr || err.message || '').trim() }, 500);
-            reply({ ok: true, enabled: fs.existsSync(lnk), result: (stdout || '').trim() });
+            if (err) return reply({ ok: false, enabled: isEnabled(), error: (stderr || err.message || '').trim() }, 500);
+            reply({ ok: true, enabled: isEnabled(), result: (stdout || '').trim() });
           });
       });
       return;
@@ -735,8 +737,8 @@ const server = http.createServer((req, res) => {
 
   // Fire a test notification through every configured channel
   if (req.method === 'POST' && req.url === '/notify-test') {
-    sendToast('🔔 AI HQ test', 'Server notifications are working.');
-    sendPush('🔔 AI HQ test', 'Server notifications are working.');
+    sendToast('🔔 AgentQuest test', 'Server notifications are working.');
+    sendPush('🔔 AgentQuest test', 'Server notifications are working.');
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       ok: true,
@@ -786,7 +788,6 @@ const server = http.createServer((req, res) => {
   // Static files
   let urlPath = req.url.split('?')[0];
   if (urlPath === '/') urlPath = '/app.html';                 // shell: keeps all views mounted
-  else if (urlPath === '/office' || urlPath === '/office/') urlPath = '/index.html';
   else if (urlPath === '/dashboard' || urlPath === '/dashboard/') urlPath = '/dashboard.html';
   else if (urlPath === '/history' || urlPath === '/history/') urlPath = '/history.html';
   else if (urlPath === '/rpg' || urlPath === '/rpg/' || urlPath === '/game') urlPath = '/rpg.html';
@@ -825,15 +826,15 @@ server.listen(PORT, '0.0.0.0', () => {
   }
   console.log(`
 +--------------------------------------------------+
-|                AI HQ SERVER v2                   |
+|              ⚔  A G E N T Q U E S T  ⚔           |
 +--------------------------------------------------+
-  Office:     http://localhost:${PORT}
-  Dashboard:  http://localhost:${PORT}/dashboard
-  Network:    http://${localIP}:${PORT}
-  Sessions:   GET  http://localhost:${PORT}/sessions
-  Events:     POST http://localhost:${PORT}/event
+  Quest world:   http://localhost:${PORT}
+  Control panel: http://localhost:${PORT}/dashboard
+  History:       http://localhost:${PORT}/history
+  Network:       http://${localIP}:${PORT}
+  Events:        POST http://localhost:${PORT}/event
 
-Waiting for Claude Code events...`);
+The guild doors are open. Waiting for agents...`);
 });
 
 // Tail Claude Desktop's main.log to surface cowork / desktop-hosted sessions that

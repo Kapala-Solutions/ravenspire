@@ -1,11 +1,11 @@
-// sw.js — AI HQ service worker.
+// sw.js — AgentQuest service worker.
 // Makes the control panel installable and resilient offline. Strategy:
 //   - Dynamic data (/sessions, /event, /history, /roles, /status, WebSocket): never cached.
 //   - App shell (HTML): network-first, fall back to cache when the server is down.
 //   - Static assets (icons, manifest, scripts): cache-first, refreshed in the background.
-const CACHE = 'aihq-v5';
+const CACHE = 'agentquest-v1';
 const SHELL = [
-  '/', '/office', '/dashboard', '/history', '/rpg',
+  '/', '/dashboard', '/history', '/rpg',
   '/manifest.webmanifest',
   '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon-32.png',
 ];

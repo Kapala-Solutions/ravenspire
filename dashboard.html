@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AI HQ — Control Panel</title>
+<title>AgentQuest — Control Panel</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0b0e14">
-<meta name="application-name" content="AI HQ">
+<meta name="application-name" content="AgentQuest">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="AI HQ">
+<meta name="apple-mobile-web-app-title" content="AgentQuest">
 <style>
   :root {
     --bg: #0b0e14;
@@ -298,7 +298,7 @@
 </head>
 <body>
   <header>
-    <h1><span class="dot">●</span> AI HQ · Control Panel</h1>
+    <h1><span class="dot">●</span> ⚔ AgentQuest · Control Panel</h1>
     <div class="stats">
       <div class="stat"><div class="v" id="s-sessions">0</div><div class="l">Sessions</div></div>
       <div class="stat"><div class="v" id="s-active">0</div><div class="l">Active</div></div>
@@ -309,7 +309,7 @@
     </div>
     <button class="toplink" id="groupBtn" title="Group sessions by project/workspace">🧩 Group</button>
     <button class="toplink" id="muteBtn" title="Toggle alert sound">🔔</button>
-    <a class="toplink" href="/">🏢 Office view</a>
+    <a class="toplink" href="/">⚔️ Quest world</a>
     <a class="toplink" href="/history">📈 History</a>
     <a class="toplink" href="/rpg" title="Guild of Agents — RPG quest view">⚔️ RPG</a>
     <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" onclick="openSettings()">⚙</button>
@@ -325,7 +325,7 @@
         <div class="setting-row">
           <div>
             <div class="setting-label">Start with Windows</div>
-            <div class="setting-desc">Launch AI HQ automatically (hidden) when you log in to Windows.</div>
+            <div class="setting-desc">Launch AgentQuest automatically (hidden) when you log in to Windows.</div>
             <div class="setting-status" id="autostartStatus"></div>
           </div>
           <label class="switch">
@@ -374,7 +374,7 @@
           <button class="toplink" onclick="testNotify()">🔔 Test</button>
         </div>
       </div>
-      <div class="settings-foot">AI HQ · Claude Code Control Panel</div>
+      <div class="settings-foot">AgentQuest · mission control for your AI agents</div>
     </div>
   </div>
 
@@ -496,7 +496,7 @@
     } finally { input.disabled = false; }
   }
 
-  // Running inside the AI HQ shell? Then nav links switch tabs (no reload),
+  // Running inside the AgentQuest shell? Then nav links switch tabs (no reload),
   // the avatar jump posts to the shell, and title/badge updates are forwarded.
   const EMBEDDED = window.parent !== window;
   function setTitle(text) {
@@ -504,7 +504,7 @@
     if (EMBEDDED) { try { parent.postMessage({ type: 'title', text }, location.origin); } catch {} }
   }
   if (EMBEDDED) {
-    const MAP = { '/': 'office', '/history': 'history', '/rpg': 'rpg' };
+    const MAP = { '/': 'rpg', '/history': 'history', '/rpg': 'rpg' };
     document.querySelectorAll('a.toplink[href]').forEach(a => {
       const view = MAP[a.getAttribute('href')];
       if (!view) return;
@@ -690,7 +690,7 @@
       el.onclick = (e) => { e.stopPropagation(); openFolder(el.dataset.open); };
     });
 
-    // avatar → jump to this agent in the office view (instant tab switch in the shell)
+    // avatar → jump to this agent in the quest world (instant tab switch in the shell)
     grid.querySelectorAll('.avatar[data-office]').forEach(el => {
       el.onclick = (e) => {
         e.stopPropagation();
@@ -801,7 +801,7 @@
     return `
       <div class="card ${s.state} ${s.needsAttention ? 'attention' : ''}">
         <div class="row">
-          <div class="avatar office-link" data-office="${s.sessionId}" style="background:${p.color}" title="View ${esc(s.name || p.name)} in the office">${esc(p.initial)}</div>
+          <div class="avatar office-link" data-office="${s.sessionId}" style="background:${p.color}" title="View ${esc(s.name || p.name)} in the quest world">${esc(p.initial)}</div>
           <div class="idblock">
             <div class="name" data-id="${s.sessionId}" title="click to rename">${esc(s.name || p.name)}</div>
             <div class="activity">${esc(s.activity || 'Working')}</div>
@@ -930,13 +930,13 @@
     if (!waiting.length) {
       bar.style.display = 'none';
       prevWaiting = new Set();
-      setTitle('AI HQ — Control Panel');
+      setTitle('AgentQuest — Control Panel');
       return;
     }
     const who = waiting.map(s => `${esc(s.name)} (${esc(s.attentionReason || 'waiting')})`).join(' · ');
     bar.innerHTML = `<span class="bell">🔔</span> <span>${waiting.length} agent${waiting.length>1?'s':''} waiting for you</span> <span class="who">${who}</span>`;
     bar.style.display = 'flex';
-    setTitle(`(${waiting.length}) ⏳ AI HQ`);
+    setTitle(`(${waiting.length}) ⏳ AgentQuest`);
 
     // fire chime + OS notification only for NEW waiters
     const now = new Set(waiting.map(s => s.sessionId));

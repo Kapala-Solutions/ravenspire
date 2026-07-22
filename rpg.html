@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AI HQ — Guild of Agents</title>
+<title>AgentQuest</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -128,7 +128,7 @@
 </head>
 <body>
   <div class="hud">
-    <div class="guild-title">⚔ AI-HQ · GUILD OF AGENTS</div>
+    <div class="guild-title">⚔ AGENTQUEST</div>
     <div class="hud-stats">
       <span class="hud-stat">🪙 <b id="h-gold">0g</b></span>
       <span class="hud-stat">🔮 <b id="h-mana">0</b> mana</span>
@@ -138,7 +138,6 @@
     <div class="hud-spacer"></div>
     <span class="rpg-btn" id="sfxBtn" title="Toggle chiptune sound effects">🔇 SFX</span>
     <span class="rpg-btn" id="crtBtn" title="Toggle retro scanlines">📺 CRT</span>
-    <a class="rpg-btn" href="/office">🏢 Office</a>
     <a class="rpg-btn" href="/dashboard">📊 Panel</a>
     <a class="rpg-btn" href="/history">📈 History</a>
   </div>
@@ -152,12 +151,12 @@
 
   <div id="sheetOverlay"><div class="sheet" id="sheetBody"></div></div>
 
-  <div id="splash"><div class="t1">⚔ AI-HQ ⚔</div><div class="t2">GUILD OF AGENTS</div><div class="t3">▶ PRESS TO BEGIN</div></div>
+  <div id="splash"><div class="t1">⚔ AGENTQUEST ⚔</div><div class="t2">YOUR AGENTS · THEIR LEGEND</div><div class="t3">▶ PRESS TO BEGIN</div></div>
 
 <script>
 'use strict';
 // ============================================================================
-// AI-HQ: Guild of Agents — a JRPG visualization of live Claude Code sessions.
+// AgentQuest — a JRPG visualization of live Claude Code sessions.
 // Sessions are heroes; workspaces form PARTIES that battle a shared monster;
 // the biggest hoard of tokens spawns a WORLD BOSS. Tool events land as
 // attacks in the battle log; finishing a quest triggers a victory fanfare;
@@ -575,6 +574,7 @@ blog('The guild doors creak open… heroes report for duty.');
 const heroes = new Map();    // sessionId -> hero
 const parties = new Map();   // wkey -> {key, proj, site, monster, members[], sumTokens, counterNext, victoryAt}
 const lastSessions = new Map(); // sessionId -> latest full server session (for the hero sheet)
+let pendingAgent = new URLSearchParams(location.search).get('agent'); // /?agent=<id> deep link -> open that hero's sheet
 const HALL_DOOR = { x: 9.9 * TILE, y: 10.6 * TILE };
 // formation offsets (tiles) around a site, strongest hero at the front
 const FORM = [[-1.15, 0], [-1.95, -0.55], [-1.95, 0.55], [-2.75, -0.95], [-2.75, 0], [-2.75, 0.95], [-3.4, -0.5], [-3.4, 0.5]];
@@ -774,6 +774,14 @@ function syncHeroes(list) {
 
   updateHUD(list);
   updateQuestPanel();
+
+  // deep link (/?agent=<id>): once that hero exists, ping them and open their sheet
+  if (pendingAgent && heroes.has(pendingAgent)) {
+    const h = heroes.get(pendingAgent);
+    h.ping = performance.now();
+    openHeroSheet(pendingAgent);
+    pendingAgent = null;
+  }
 }
 
 // battle actions from live tool events
@@ -1298,10 +1306,14 @@ paintSfx();
 (function() {
   window.addEventListener('message', (e) => {
     if (e.origin !== location.origin || !e.data || typeof e.data !== 'object') return;
-    if (e.data.type === 'highlight-agent') { const h = heroes.get(e.data.id); if (h) h.ping = performance.now(); }
+    if (e.data.type === 'highlight-agent') {
+      const h = heroes.get(e.data.id);
+      if (h) { h.ping = performance.now(); openHeroSheet(e.data.id); }
+      else pendingAgent = e.data.id; // hero not synced yet — open once it appears
+    }
   });
   if (window.parent === window) return;
-  const MAP = { '/office': 'office', '/dashboard': 'panel', '/history': 'history' };
+  const MAP = { '/dashboard': 'panel', '/history': 'history' };
   document.querySelectorAll('a.rpg-btn[href]').forEach(a => {
     const view = MAP[a.getAttribute('href')];
     if (!view) return;
