@@ -1,14 +1,15 @@
 {
   "name": "ravenspire",
   "version": "2.0.0",
-  "description": "Mission control for your AI agents, as a JRPG — live quest world, control panel, cost & labor analytics, and native notifications for Claude Code sessions.",
+  "description": "Mission control for your AI agents, as a JRPG — live quest world, control panel, cost & labor analytics, and native notifications for Claude Code and OpenAI Codex sessions.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "setup": "node setup-hooks.js",
+    "setup:codex": "node setup-hooks-codex.js",
     "icons": "node generate-icons.js"
   },
-  "keywords": ["claude", "claude-code", "agents", "dashboard", "rpg", "visualization", "monitoring", "pixel-art"],
+  "keywords": ["claude", "claude-code", "codex", "openai-codex", "agents", "dashboard", "rpg", "visualization", "monitoring", "pixel-art"],
   "author": "Kapala Solutions",
   "license": "MIT",
   "type": "commonjs",

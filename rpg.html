@@ -1202,7 +1202,7 @@ function renderHeroSheet() {
       <div class="sheet-emb" style="background:${h.color}">${h.cls.icon}</div>
       <div>
         <div class="sheet-name">${esc(h.name)} <span style="color:#c9a227">Lv.${h.lvl}</span></div>
-        <div class="sheet-sub">${h.cls.title}${h.lvl >= 30 ? ' 👑' : h.lvl >= 20 ? ' ✨' : h.lvl >= 10 ? ' 🎗' : ''} · ${esc(s.model || 'unknown')} · ${esc(s.ide || '?')}${s.source === 'cowork' ? ' · 🤝 cowork' : ''}</div>
+        <div class="sheet-sub">${h.cls.title}${h.lvl >= 30 ? ' 👑' : h.lvl >= 20 ? ' ✨' : h.lvl >= 10 ? ' 🎗' : ''} · ${esc(s.model || 'unknown')} · ${esc(s.ide || '?')}${s.source === 'cowork' ? ' · 🤝 cowork' : s.source === 'codex' ? ' · ✳️ codex' : ''}</div>
       </div>
       <button class="sheet-close" onclick="closeHeroSheet()">×</button>
     </div>

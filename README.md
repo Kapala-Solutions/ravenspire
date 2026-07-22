@@ -31,7 +31,7 @@ Ravenspire solves both: it's a real operations panel (cost, labor value, alerts,
 | ⏱ **Response analytics** | Every wait→response cycle logged: median response time, wait-time buckets, ignored-alert counts — your real parallelism ceiling, measured |
 | 📈 **History** (`/#history`) | Lifetime tiles, trend charts (tokens / cost / sessions), and a durable per-session archive that survives clearing the board |
 | 💰 **Cost & labor accounting** | API cost estimated from transcripts; each agent gets a role → salary → hourly rate → **labor value** of its active work |
-| 🤝 **Two ingestion paths** | Claude Code via hooks, plus Claude Desktop **cowork** sessions via a log watcher (badged `code` / `cowork`) |
+| 🤝 **Multiple ingestion paths** | Claude Code **and** OpenAI Codex via hooks, plus Claude Desktop **cowork** sessions via a log watcher (badged `code` / `codex` / `cowork`) |
 | 📱 **Installable (PWA)** | Manifest + service worker + icons: install it as a standalone desktop app window |
 
 ### Control panel & history
@@ -49,7 +49,8 @@ Requirements: **Node 18+**, and [Claude Code](https://claude.com/claude-code) (a
 git clone https://github.com/Kapala-Solutions/ravenspire.git
 cd ravenspire
 npm install
-npm run setup     # wires the Claude Code hooks into ~/.claude/settings.json (backup + merge, idempotent)
+npm run setup         # wire Claude Code hooks → ~/.claude/settings.json (backup + merge, idempotent)
+npm run setup:codex   # optional: also wire OpenAI Codex hooks → ~/.codex/hooks.json
 npm start
 ```
 

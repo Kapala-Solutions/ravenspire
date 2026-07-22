@@ -1,13 +1,17 @@
-# send-event.ps1 — forward a Claude Code hook payload to the Ravenspire server.
+# send-event.ps1 — forward a Claude Code OR OpenAI Codex hook payload to the
+# Ravenspire server.
 #
-# Claude Code pipes the hook event as JSON on stdin. This script reads that
-# JSON, augments it with the real session id, cwd, transcript path, model IDE
-# detection, and the event type, then POSTs the whole thing to the server.
+# Both CLIs pipe the hook event as JSON on stdin using the same field names
+# (session_id, cwd, transcript_path, tool_name, tool_input, prompt,
+# last_assistant_message). This script reads that JSON, augments it with IDE
+# detection, the event type, and the source CLI, then POSTs it to the server.
 #
-# Usage (from a hook): send-event.ps1 -Type SessionStart -Server 'http://127.0.0.1:3456'
+# Usage (Claude): send-event.ps1 -Type SessionStart -Server 'http://127.0.0.1:3456'
+# Usage (Codex):  send-event.ps1 -Type PreToolUse -Source codex -Server 'http://127.0.0.1:3456'
 param(
     [string]$Type,
-    [string]$Server = ""
+    [string]$Server = "",
+    [string]$Source = "code"
 )
 
 # Resolve server URL: param > env var > default
@@ -30,6 +34,16 @@ $transcriptPath = if ($payload.transcript_path) { $payload.transcript_path } els
 $toolName       = if ($payload.tool_name) { $payload.tool_name } else { "" }
 $hookEvent      = if ($payload.hook_event_name) { $payload.hook_event_name } else { $Type }
 $message        = if ($payload.message) { [string]$payload.message } else { "" }
+
+# Codex feeds these directly on the hook payload (Claude derives them from the
+# transcript instead). Harmless to capture for both; the server picks the right
+# source. prompt = UserPromptSubmit text; last_assistant_message = Stop text.
+$prompt  = if ($payload.prompt) { [string]$payload.prompt } else { "" }
+$prompt  = (($prompt -replace "[\r\n\t]+", " ") -replace "\s{2,}", " ").Trim()
+if ($prompt.Length -gt 300) { $prompt = $prompt.Substring(0, 300) }
+$lastMsg = if ($payload.last_assistant_message) { [string]$payload.last_assistant_message } else { "" }
+if ($lastMsg.Length -gt 1500) { $lastMsg = $lastMsg.Substring(0, 1500) }
+$model   = if ($payload.model) { [string]$payload.model } else { "" }
 
 # Build a short human-readable "target" from tool_input (varies per tool)
 $target = ""
@@ -75,7 +89,7 @@ $windowPid = 0
 $windowName = ""
 $windowTitle = ""
 $windowChain = ""
-if ($Type -in @('SessionStart', 'UserPromptSubmit', 'Stop', 'Notification')) {
+if ($Type -in @('SessionStart', 'UserPromptSubmit', 'Stop', 'Notification', 'PermissionRequest')) {
     try {
         $exclude = @('explorer','dwm','svchost','services','wininit','winlogon','csrss',
             'sihost','fontdrvhost','runtimebroker','textinputhost','searchhost',
@@ -144,9 +158,13 @@ public static class AqFg {
 $body = @{
     type           = $Type
     hookEvent      = $hookEvent
+    source         = "$Source"
     tool           = $toolName
     target         = "$target"
     message        = "$message"
+    prompt         = "$prompt"
+    lastMessage    = "$lastMsg"
+    model          = "$model"
     sessionId      = "$sessionId"
     cwd            = "$cwd"
     transcriptPath = "$transcriptPath"

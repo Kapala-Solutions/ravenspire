@@ -208,6 +208,7 @@
   .badge.ide { color: var(--blue); }
   .badge.tool { color: var(--green); border-color: #1e3a2b; background: #10231a; }
   .badge.source-cowork { color: var(--amber); border-color: #4a3a1e; background: #241b0f; }
+  .badge.source-codex { color: #6fd3c2; border-color: #1e463f; background: #0f2420; }
   .badge.source-code { color: var(--gray); }
 
   /* team (grouped) cards */
@@ -812,7 +813,7 @@
         <div class="badges">
           <span class="badge model">🤖 ${esc(shortModel(s.model))}</span>
           <span class="badge ide">${ideIcon(s.ide)}</span>
-          <span class="badge source-${s.source === 'cowork' ? 'cowork' : 'code'}">${s.source === 'cowork' ? '🤝 cowork' : '⌨️ code'}</span>
+          <span class="badge source-${s.source === 'cowork' ? 'cowork' : s.source === 'codex' ? 'codex' : 'code'}">${s.source === 'cowork' ? '🤝 cowork' : s.source === 'codex' ? '✳️ codex' : '⌨️ code'}</span>
           <span class="badge">📁 ${esc(s.title)}</span>
           ${s.toolCount ? `<span class="badge tool">🔧 ${s.toolCount} tools</span>` : ''}
           ${roleSelect(s)}

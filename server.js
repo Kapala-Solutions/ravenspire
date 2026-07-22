@@ -261,6 +261,7 @@ function stateForEvent(type, hookEvent) {
   if (e.includes('pretooluse') || type === 'tool_start') return 'working';
   if (e.includes('posttooluse') || type === 'tool_end') return 'working';
   if (e.includes('notification')) return 'waiting';
+  if (e.includes('permissionrequest')) return 'waiting'; // Codex: approval needed
   if (e === 'stop' || e.includes('stop')) return 'idle';
   if (e.includes('sessionend')) return 'ended';
   return null;
@@ -279,7 +280,7 @@ function upsertSession(ev) {
       activity: 'Starting up',     // live "what it's doing" line
       model: null,
       ide: ev.ide || 'cli',
-      source: ev.source === 'cowork' ? 'cowork' : 'code', // 'code' (hooks) | 'cowork' (desktop log)
+      source: ev.source || 'code', // 'code' (Claude hooks) | 'codex' (Codex hooks) | 'cowork' (desktop log)
       title: ev.title || 'session',
       cwd: ev.cwd || '',
       state: 'starting',
@@ -317,10 +318,12 @@ function upsertSession(ev) {
 
   // Always refresh cheap fields
   s.lastActivity = now;
-  // Source: a native hook event is authoritative 'code'; cowork-log events only
-  // set 'cowork' when we've never seen a hook for this session (VM cowork, etc.).
-  if (ev.source === 'cowork') { if (s.source !== 'code') s.source = 'cowork'; }
-  else s.source = 'code';
+  // Source: a native hook event is authoritative ('code' for Claude, 'codex' for
+  // Codex); cowork-log events only set 'cowork' when we've never seen a hook for
+  // this session (VM cowork, etc.) so they never clobber a real hook source.
+  const evSource = ev.source || 'code';
+  if (evSource === 'cowork') { if (s.source !== 'code' && s.source !== 'codex') s.source = 'cowork'; }
+  else s.source = evSource;
   if (ev.ide) s.ide = ev.ide;
   if (ev.title) s.title = ev.title;
   if (ev.cwd) s.cwd = ev.cwd;
@@ -350,6 +353,11 @@ function upsertSession(ev) {
   } else if (evtName === 'stop' || evtName.includes('stop')) {
     s.needsAttention = true;
     s.attentionReason = 'Finished — your turn';
+    if (!wasAttention) s.waitingSince = now;
+  } else if (evtName.includes('permissionrequest')) {
+    // Codex: the agent is blocked on an approval prompt — that's a "needs you".
+    s.needsAttention = true;
+    s.attentionReason = ev.target ? 'Approve: ' + String(ev.target).slice(0, 70) : 'Approval needed';
     if (!wasAttention) s.waitingSince = now;
   } else if (
     evtName.includes('userpromptsubmit') || evtName.includes('pretooluse') ||
@@ -403,8 +411,11 @@ function upsertSession(ev) {
     hookEvent: ev.hookEvent || ev.type,
   });
 
-  // Enrich from transcript (tokens, model, name hint) when available
-  if (s.transcriptPath) {
+  // Enrich from transcript (tokens, model, name hint) when available. This parser
+  // understands Claude Code's transcript schema; Codex uses a different on-disk
+  // format (and recent versions log to SQLite), so we skip it for Codex and lean
+  // on the fields Codex already delivers on the hook payload instead.
+  if (s.transcriptPath && s.source !== 'codex') {
     const t = parseTranscript(s.transcriptPath);
     if (t.model) s.model = t.model;
     if (t.tokens && t.tokens.total > 0) {
@@ -417,6 +428,15 @@ function upsertSession(ev) {
     if (t.lastAssistantText) s.lastMessage = t.lastAssistantText; // the agent's latest words (the question, when waiting)
     // Transcript timestamps give the most accurate (and retroactive) active time
     if (t.activeMs && t.activeMs > s.activeMs) s.activeMs = t.activeMs;
+  }
+
+  // Codex hook-field enrichment (no Claude-style transcript to mine). The prompt
+  // becomes the quest; last_assistant_message is the "question, when waiting".
+  // Token/cost/labor stay at zero for Codex until a Codex transcript parser lands.
+  if (s.source === 'codex') {
+    if (ev.model) s.model = ev.model;
+    if (ev.prompt) s.task = String(ev.prompt);
+    if (ev.lastMessage) s.lastMessage = String(ev.lastMessage);
   }
 
   // Display name = the persona (or a user override). The task/project are

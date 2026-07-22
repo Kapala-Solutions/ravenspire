@@ -340,7 +340,7 @@
     { key: 'task', label: 'Task', get: (s) => s.task || '', cell: (s) => `<span class="task-cell" title="${esc(s.task || '')}">${esc(s.task || '—')}</span>` },
     { key: 'model', label: 'Model', get: (s) => s.model || '', cell: (s) => `<span class="pill">${esc(shortModel(s.model))}</span>` },
     { key: 'ide', label: 'IDE', get: (s) => s.ide || '', cell: (s) => esc(s.ide || '—') },
-    { key: 'source', label: 'Source', get: (s) => s.source || 'code', cell: (s) => `<span class="pill">${s.source === 'cowork' ? '🤝 cowork' : '⌨️ code'}</span>` },
+    { key: 'source', label: 'Source', get: (s) => s.source || 'code', cell: (s) => `<span class="pill">${s.source === 'cowork' ? '🤝 cowork' : s.source === 'codex' ? '✳️ codex' : '⌨️ code'}</span>` },
     { key: 'role', label: 'Role', get: (s) => s.role || '', cell: (s) => esc(s.role || '—') },
     { key: 'activeMs', label: 'Active', num: true, get: (s) => +s.activeMs || 0, cell: (s) => dur(s.activeMs) },
     { key: 'tokens', label: 'Tokens', num: true, get: (s) => (s.tokens && s.tokens.total) || 0, cell: (s) => fmt((s.tokens && s.tokens.total) || 0) },
