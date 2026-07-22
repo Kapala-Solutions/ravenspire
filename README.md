@@ -23,6 +23,9 @@ The original AI HQ was a pixel office with one character per session. This versi
 | **History** (`/history`) | Lifetime stat tiles, SVG trend charts (tokens / cost / sessions over time), and a sortable **per-session archive** that survives clearing the board |
 | **Cost & labor accounting** | Infers a role per session → salary → hourly rate → **labor value** from active work time; API cost estimated from the transcript |
 | **"Needs you" alerts** | Pulsing banner, chime, OS notification, and tab-title badge when an agent finishes or asks for input (with mute) |
+| **Question preview** | Waiting cards show the agent's **actual last message** (pulled from the transcript) with a live *waiting for 4m* timer — see what it's asking before you context-switch; click to expand the full text |
+| **Server-side notifications** | Native **Windows toasts** + optional **phone push** (ntfy.sh / Telegram / webhook) fired by the *server*, so alerts reach you with no browser open — plus a one-time reminder nag if an agent is still waiting after N minutes. Configure in ⚙ Settings, test with one click |
+| **Response-time analytics** | Every wait→response cycle is logged durably: median response time on the dashboard, and a History section with daily stats, wait-time buckets, ignored-alert counts, and a per-alert table — your real parallelism ceiling, measured |
 | **Click-to-focus** | Click a card to bring that session's terminal/IDE window to the front; Claude Desktop sessions open via `claude://resume` deep link |
 | **Two ingestion paths** | Hook-based capture for Claude **Code**, plus a log watcher for Claude Desktop **cowork** sessions (incl. VM sessions that can't post back). A `code` / `cowork` badge marks each |
 | **Installable app (PWA)** | Custom favicon/icons, web app manifest, service worker (offline app shell), and app shortcuts — install it as a standalone desktop window |
@@ -120,12 +123,23 @@ main.log watcher ──┘        · transcript parse (tokens/cost/model)
   "autoStart": true,
   "staleMinutes": 15,      // mark a quiet session "idle" after N minutes
   "abandonMinutes": 45,    // drop a stuck "needs you" alert after N minutes
-  "watchDesktop": true     // set false to disable the cowork log watcher
+  "watchDesktop": true,    // set false to disable the cowork log watcher
   // "desktopLogPath": "…" // override the Claude Desktop main.log location
+  "notify": {
+    "toast": true,          // native Windows toasts from the server
+    "stops": true,          // also alert on turn-end ("your turn"); false = only explicit input requests
+    "remindMinutes": 10,    // nag once if an agent is still waiting after N minutes (0 = off)
+    "ntfyTopic": "",        // phone push: install the free ntfy app, subscribe to a secret topic, put it here
+    "telegramToken": "",    // or a Telegram bot…
+    "telegramChatId": "",
+    "webhookUrl": ""        // or any JSON webhook: {app, title, body}
+  }
 }
 ```
 
 The port can also be overridden with the `PORT` environment variable.
+
+> ⚠️ If you use phone push, treat the ntfy topic / Telegram token as secrets — anyone who knows an ntfy topic can read its messages. Pick a long random topic name, and think twice before committing `config.json` to a public repo.
 
 ---
 
@@ -136,6 +150,9 @@ The port can also be overridden with the `PORT` environment variable.
 | `GET` | `/sessions` | All sessions (JSON) |
 | `GET` | `/history.csv` | Aggregate time-series |
 | `GET` | `/history/sessions` | Per-session archive + live sessions (merged, deduped) |
+| `GET` | `/responses` | Wait→response log (who waited, how long, how it resolved) |
+| `GET`/`POST` | `/notify-config` | Read / update notification settings |
+| `POST` | `/notify-test` | Fire a test notification through every enabled channel |
 | `GET` | `/roles` | Role list + salary table |
 | `GET` | `/autostart` · `POST` `/autostart` | Read / toggle "Start with Windows" |
 | `POST` | `/event` | Hook event ingestion |

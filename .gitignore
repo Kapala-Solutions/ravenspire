@@ -5,6 +5,7 @@ package-lock.json
 sessions.json
 history.csv
 sessions-history.jsonl
+responses.jsonl
 
 # local-only tooling
 .verify-tmp/

@@ -127,6 +127,18 @@
     font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 700;
     background: rgba(245,181,61,.18); border: 1px solid var(--amber); color: var(--amber);
   }
+  .waitbadge [data-waiting] { color: var(--text); font-weight: 600; }
+  /* the agent's pending question, previewed on waiting cards */
+  .question {
+    background: rgba(245,181,61,.07); border-left: 3px solid var(--amber);
+    border-radius: 0 8px 8px 0; padding: 8px 10px; cursor: pointer;
+  }
+  .question .q-label { font-size: 10px; color: var(--amber); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+  .question .q-text {
+    font-size: 12px; color: var(--text); line-height: 1.45; white-space: pre-wrap; word-break: break-word;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .question.expanded .q-text { display: block; -webkit-line-clamp: unset; max-height: 300px; overflow-y: auto; }
   .card { cursor: pointer; }
   .focusbtn {
     background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
@@ -293,6 +305,7 @@
       <div class="stat"><div class="v" id="s-tokens">0</div><div class="l">Tokens</div></div>
       <div class="stat"><div class="v" id="s-cost">$0</div><div class="l">API Cost</div></div>
       <div class="stat"><div class="v" id="s-labor" style="color:var(--green)">$0</div><div class="l">Labor Value</div></div>
+      <div class="stat" title="Median time agents waited for you today (lower = more parallel throughput)"><div class="v" id="s-resp" style="color:var(--amber)">—</div><div class="l">Med. Response</div></div>
     </div>
     <button class="toplink" id="groupBtn" title="Group sessions by project/workspace">🧩 Group</button>
     <button class="toplink" id="muteBtn" title="Toggle alert sound">🔔</button>
@@ -327,6 +340,38 @@
             <div class="setting-status" id="installStatus"></div>
           </div>
           <button class="toplink" id="installBtn" onclick="installApp()" disabled>Install</button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Windows toasts</div>
+            <div class="setting-desc">Server-side native notifications when an agent needs you — works with no browser open.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="toastToggle" onchange="saveNotify({toast:this.checked})"><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Alert on turn-end too</div>
+            <div class="setting-desc">Also notify when an agent simply finishes its turn ("your turn"), not only on explicit input requests. Turn off if too noisy.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="stopsToggle" onchange="saveNotify({stops:this.checked})"><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div style="flex:1">
+            <div class="setting-label">Phone push (ntfy.sh)</div>
+            <div class="setting-desc">Install the free <b>ntfy</b> app, subscribe to a secret topic, and enter that topic here. Telegram/webhook can be set in config.json.</div>
+            <div style="display:flex; gap:8px; margin-top:8px">
+              <input type="text" id="ntfyTopic" placeholder="my-secret-topic-4821" style="flex:1; background:var(--panel2); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:6px 10px; font-size:12px" />
+              <button class="toplink" onclick="saveNotify({ntfyTopic: document.getElementById('ntfyTopic').value})">Save</button>
+            </div>
+            <div class="setting-status" id="notifyStatus"></div>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Test notifications</div>
+            <div class="setting-desc">Fires a sample alert through every enabled channel right now.</div>
+          </div>
+          <button class="toplink" onclick="testNotify()">🔔 Test</button>
         </div>
       </div>
       <div class="settings-foot">AI HQ · Claude Code Control Panel</div>
@@ -381,9 +426,36 @@
   }
 
   // ---- Settings modal + "Start with Windows" ----
+  function setNotifyStatus(msg, cls) {
+    const el = document.getElementById('notifyStatus');
+    if (el) { el.textContent = msg || ''; el.className = 'setting-status ' + (cls || ''); }
+  }
+  function refreshNotify() {
+    fetch('/notify-config').then(r => r.json()).then(c => {
+      const t = document.getElementById('toastToggle'); if (t) t.checked = !!c.toast;
+      const st = document.getElementById('stopsToggle'); if (st) st.checked = !!c.stops;
+      const n = document.getElementById('ntfyTopic'); if (n && !n.matches(':focus')) n.value = c.ntfyTopic || '';
+      const extras = [c.hasTelegram && 'Telegram', c.hasWebhook && 'webhook'].filter(Boolean).join(' + ');
+      setNotifyStatus(extras ? `Also configured: ${extras} (via config.json)` : '', '');
+    }).catch(() => setNotifyStatus('Server unreachable.', 'err'));
+  }
+  function saveNotify(patch) {
+    fetch('/notify-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+      .then(r => r.json())
+      .then(d => { setNotifyStatus(d.ok ? 'Saved.' : 'Save failed.', d.ok ? 'ok' : 'err'); if (d.ok) setTimeout(refreshNotify, 400); })
+      .catch(() => setNotifyStatus('Save failed.', 'err'));
+  }
+  function testNotify() {
+    setNotifyStatus('Sending…', '');
+    fetch('/notify-test', { method: 'POST' }).then(r => r.json()).then(d => {
+      const on = Object.entries(d.channels || {}).filter(([, v]) => v).map(([k]) => k).join(', ');
+      setNotifyStatus(on ? `Sent via: ${on}` : 'No channels enabled.', on ? 'ok' : 'err');
+    }).catch(() => setNotifyStatus('Test failed.', 'err'));
+  }
   function openSettings() {
     document.getElementById('settingsOverlay').classList.add('open');
     refreshAutostart();
+    refreshNotify();
     if (window.matchMedia('(display-mode: standalone)').matches) {
       const btn = document.getElementById('installBtn');
       if (btn) { btn.disabled = true; btn.textContent = 'Installed'; }
@@ -447,6 +519,21 @@
   let roleList = ['Software Engineer'];
   fetch('/roles').then(r => r.json()).then(d => { if (d.roles) roleList = d.roles; }).catch(()=>{});
 
+  // median response time today (how fast you answer waiting agents)
+  function refreshRespStat() {
+    fetch('/responses').then(r => r.json()).then(rows => {
+      const today = new Date().toDateString();
+      const answered = rows.filter(r => ['reply', 'resumed', 'focus'].includes(r.via) && new Date(r.respondedAt).toDateString() === today);
+      const el = document.getElementById('s-resp');
+      if (!el) return;
+      if (!answered.length) { el.textContent = '—'; return; }
+      const ms = answered.map(r => r.waitedMs).sort((a, b) => a - b);
+      el.textContent = durShort(ms[Math.floor(ms.length / 2)]);
+    }).catch(() => {});
+  }
+  refreshRespStat();
+  setInterval(refreshRespStat, 60000);
+
   function fmt(n) {
     if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
     if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
@@ -474,6 +561,20 @@
     if (h) return `${h}h ${m}m`;
     if (m) return `${m}m ${s}s`;
     return `${s}s`;
+  }
+  function waitedFor(sinceISO) {
+    if (!sinceISO) return '';
+    let s = Math.max(0, Math.floor((Date.now() - new Date(sinceISO).getTime()) / 1000));
+    const h = Math.floor(s/3600); const m = Math.floor((s - h*3600)/60);
+    if (h) return `waiting ${h}h ${m}m`;
+    if (m) return `waiting ${m}m`;
+    return `waiting ${s}s`;
+  }
+  function durShort(ms) {
+    const s = Math.max(0, Math.round(ms / 1000));
+    if (s >= 3600) return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+    if (s >= 60) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+    return s + 's';
   }
 
   // ---- status filter ----
@@ -597,9 +698,14 @@
         else location.href = '/?agent=' + encodeURIComponent(el.dataset.office);
       };
     });
+    // pending-question preview → expand/collapse (never triggers card focus)
+    grid.querySelectorAll('.question').forEach(el => {
+      el.onclick = (e) => { e.stopPropagation(); el.classList.toggle('expanded'); };
+    });
+
     grid.querySelectorAll('.card').forEach(card => {
       card.onclick = (e) => {
-        if (e.target.closest('.name, .rolesel, .info, .tipbox, .focusbtn')) return;
+        if (e.target.closest('.name, .rolesel, .info, .tipbox, .focusbtn, .question')) return;
         const id = card.querySelector('.focusbtn');
         if (id) focusSession(id.dataset.focus);
       };
@@ -683,8 +789,15 @@
     const cachePct = ((tok.cacheCreation+tok.cacheRead)/total*100)||0;
     const p = s.persona || { name: s.name, color: '#5b8cff', initial: (s.name||'?')[0] };
     const stateChip = s.needsAttention
-      ? `<div class="waitbadge">⏳ ${esc(s.attentionReason || 'Waiting for you')}</div>`
+      ? `<div class="waitbadge">⏳ ${esc(s.attentionReason || 'Waiting for you')}${s.waitingSince ? ` · <span data-waiting="${s.waitingSince}">${waitedFor(s.waitingSince)}</span>` : ''}</div>`
       : `<div class="state"><span class="pulse"></span>${s.state}</div>`;
+    // the agent's actual question/summary, shown while it waits for you
+    const question = s.needsAttention && s.lastMessage
+      ? `<div class="question" data-qq="1" title="click to expand">
+           <div class="q-label">💬 The agent says:</div>
+           <div class="q-text">${esc(s.lastMessage)}</div>
+         </div>`
+      : '';
     return `
       <div class="card ${s.state} ${s.needsAttention ? 'attention' : ''}">
         <div class="row">
@@ -704,6 +817,7 @@
           ${s.toolCount ? `<span class="badge tool">🔧 ${s.toolCount} tools</span>` : ''}
           ${roleSelect(s)}
         </div>
+        ${question}
         ${s.task ? `<div class="task" title="${esc(s.task)}">🎯 ${esc(s.task)}</div>` : ''}
         <div class="metrics">
           <div class="metric"><div class="mv" data-uptime="${s.startTime}">${uptime(s.startTime)}</div><div class="ml">Uptime</div></div>
@@ -872,10 +986,13 @@
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-  // Live uptime tick without full re-render
+  // Live uptime + waiting-timer tick without full re-render
   setInterval(() => {
     document.querySelectorAll('[data-uptime]').forEach(el => {
       el.textContent = uptime(el.dataset.uptime);
+    });
+    document.querySelectorAll('[data-waiting]').forEach(el => {
+      el.textContent = waitedFor(el.dataset.waiting);
     });
   }, 1000);
 

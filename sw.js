@@ -3,7 +3,7 @@
 //   - Dynamic data (/sessions, /event, /history, /roles, /status, WebSocket): never cached.
 //   - App shell (HTML): network-first, fall back to cache when the server is down.
 //   - Static assets (icons, manifest, scripts): cache-first, refreshed in the background.
-const CACHE = 'aihq-v4';
+const CACHE = 'aihq-v5';
 const SHELL = [
   '/', '/office', '/dashboard', '/history', '/rpg',
   '/manifest.webmanifest',
@@ -13,7 +13,7 @@ const SHELL = [
 // Data/control endpoints that must always hit the network (never cached).
 // NB: '/history' (no suffix) is the HTML page, handled by the navigation branch —
 // only the data routes '/history.csv' and '/history/sessions' are bypassed here.
-const BYPASS = ['/sessions', '/event', '/history.csv', '/history/sessions', '/roles', '/status', '/debug', '/focus', '/open-folder', '/role', '/rename', '/clear', '/restart', '/autostart'];
+const BYPASS = ['/sessions', '/event', '/history.csv', '/history/sessions', '/responses', '/notify-config', '/notify-test', '/roles', '/status', '/debug', '/focus', '/open-folder', '/role', '/rename', '/clear', '/restart', '/autostart'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
