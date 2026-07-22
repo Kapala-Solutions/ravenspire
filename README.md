@@ -4,15 +4,11 @@
 
 Every **Claude Code** *and* **OpenAI Codex** session on your machine becomes a pixel-art **hero** in a living guild world: their task is a **quest**, working means **battling a monster** sized by the job, tool calls land as **attacks in a live battle log**, and the biggest project spawns a **☠ WORLD BOSS**. Behind the game sits a full **control panel** with cost & labor analytics, response-time tracking, durable history, and native notifications.
 
+Zero build. Zero frameworks. One `npm start`.
+
 
 https://github.com/user-attachments/assets/d0f26e25-d2a5-4430-96a4-f629a6a09c2f
 
-
-Zero build. Zero frameworks. One `npm start`.
-
-[![Ravenspire — click to watch the 40-second demo](ravenspire-rpg.png)](docs/demo/ravenspire-demo.mp4)
-
-▶️ **[Watch the 40-second demo](docs/demo/ravenspire-demo.mp4)** — quest world, control panel, Claude + Codex side by side, and response analytics.
 
 ---
 
