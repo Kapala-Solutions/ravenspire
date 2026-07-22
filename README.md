@@ -2,7 +2,7 @@
 
 **Mission control for your AI agents — as a JRPG.**
 
-Every Claude Code session on your machine becomes a pixel-art **hero** in a living guild world: their task is a **quest**, working means **battling a monster** sized by the job, tool calls land as **attacks in a live battle log**, and the biggest project spawns a **☠ WORLD BOSS**. Behind the game sits a full **control panel** with cost & labor analytics, response-time tracking, durable history, and native notifications.
+Every **Claude Code** *and* **OpenAI Codex** session on your machine becomes a pixel-art **hero** in a living guild world: their task is a **quest**, working means **battling a monster** sized by the job, tool calls land as **attacks in a live battle log**, and the biggest project spawns a **☠ WORLD BOSS**. Behind the game sits a full **control panel** with cost & labor analytics, response-time tracking, durable history, and native notifications.
 
 Zero build. Zero frameworks. One `npm start`.
 
@@ -43,7 +43,7 @@ Ravenspire solves both: it's a real operations panel (cost, labor value, alerts,
 
 ## 🚀 Quick start
 
-Requirements: **Node 18+**, and [Claude Code](https://claude.com/claude-code) (any surface: CLI, VS Code, Claude Desktop). On **macOS/Linux**, also install [PowerShell 7 (`pwsh`)](https://github.com/PowerShell/PowerShell) — the hook scripts run through it, and `npm run setup` uses it automatically. (Windows has it built in.)
+Requirements: **Node 18+**, and at least one of [Claude Code](https://claude.com/claude-code) or [OpenAI Codex](https://github.com/openai/codex) — any surface (CLI, VS Code, Claude Desktop). On **macOS/Linux**, also install [PowerShell 7 (`pwsh`)](https://github.com/PowerShell/PowerShell) — the hook scripts run through it, and `npm run setup` uses it automatically. (Windows has it built in.)
 
 ```bash
 git clone https://github.com/Kapala-Solutions/ravenspire.git
@@ -100,14 +100,16 @@ Each hook runs `send-event.ps1`, which reads the hook payload from stdin and POS
 ## 🧠 How it works
 
 ```
-Claude Code hooks ─┐
-(send-event.ps1)   ├──▶  server.js (:3456)  ──▶  WebSocket  ──▶  quest world · panel · history
-Claude Desktop     │        · session store & personas
-main.log watcher ──┘        · transcript parsing (tokens, cost, model, last message)
-(desktop-watcher.js)        · roles → labor value  · response-time log
-                            · history.csv · sessions-history.jsonl · responses.jsonl
-                            · native toasts (notify.ps1) + ntfy/Telegram/webhook push
+Claude Code hooks  ─┐
+OpenAI Codex hooks ─┤       server.js (:3456)  ──▶  WebSocket  ──▶  quest world · panel · history
+(send-event.ps1)    ├──▶        · session store & personas
+Claude Desktop      │           · transcript parsing (tokens, cost, model, last message)
+main.log watcher   ─┘           · roles → labor value  · response-time log
+(desktop-watcher.js)            · history.csv · sessions-history.jsonl · responses.jsonl
+                                · native toasts (notify.ps1) + ntfy/Telegram/webhook push
 ```
+
+Both CLIs deliver hook events with the same field names, so they share one `send-event.ps1`; Codex sessions are tagged `codex` and badged separately. (Token/cost/labor accounting is Claude-only today — Codex sessions show live activity, quests, battles, and alerts, with cost figures left at zero until a Codex transcript parser lands.)
 
 Plain Node, no build step, one dependency (`ws`). All state is human-readable files next to the server.
 
