@@ -60,6 +60,39 @@
   .qstate.fight { color: #7fdc7f; } .qstate.wait { color: #ffcf5a; } .qstate.rest { color: #8a94a8; } .qstate.boss { color: #ff8a9a; }
   .qgold { color: #ffd76a; }
 
+  /* hero character sheet */
+  #sheetOverlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.62); display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+  #sheetOverlay.open { display: flex; }
+  .sheet {
+    width: min(580px, 94vw); max-height: 88vh; overflow-y: auto;
+    background: linear-gradient(180deg, #1d1710, #120e08);
+    border: 2px solid #c9a227; border-radius: 14px; padding: 16px 18px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.7), 0 0 40px rgba(201,162,39,.12);
+  }
+  .sheet-head { display: flex; gap: 12px; align-items: center; border-bottom: 1px solid #4a3a18; padding-bottom: 12px; }
+  .sheet-emb { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; border: 2px solid rgba(0,0,0,.4); flex: 0 0 auto; }
+  .sheet-name { font-size: 17px; font-weight: bold; color: #ffe9a8; }
+  .sheet-sub { font-size: 11px; color: #b7a476; margin-top: 2px; }
+  .sheet-close { margin-left: auto; background: none; border: none; color: #b7a476; font-size: 24px; cursor: pointer; font-family: inherit; }
+  .sheet-close:hover { color: #ffe9a8; }
+  .sheet h4 { font-size: 11px; letter-spacing: 1.5px; color: #ffd76a; margin: 14px 0 8px; text-transform: uppercase; border-bottom: 1px dashed #4a3a18; padding-bottom: 4px; }
+  .sheet-xp { height: 8px; background: #241c10; border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  .sheet-xp i { display: block; height: 100%; background: linear-gradient(90deg, #c9a227, #ffd76a); }
+  .sgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .sstat { background: rgba(255,215,106,.05); border: 1px solid #4a3a18; border-radius: 8px; padding: 7px 9px; }
+  .sstat .v { font-size: 14px; font-weight: bold; color: #ffe9a8; font-variant-numeric: tabular-nums; }
+  .sstat .l { font-size: 9.5px; color: #b7a476; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+  .squest { font-size: 12px; color: #e8dcc0; line-height: 1.5; }
+  .squest .dim { color: #b7a476; font-size: 11px; }
+  .slast { font-size: 11.5px; color: #cbbd97; white-space: pre-wrap; word-break: break-word; max-height: 150px; overflow-y: auto; background: rgba(0,0,0,.25); border: 1px solid #4a3a18; border-radius: 8px; padding: 8px 10px; line-height: 1.5; }
+  .skillbar { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 11px; color: #cbbd97; }
+  .skillbar .sn { width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; flex: 0 0 auto; }
+  .skillbar .sb { height: 12px; border-radius: 4px; background: linear-gradient(90deg, #6b5220, #c9a227); flex: 0 0 auto; }
+  .skillbar .sv { color: #ffe9a8; font-weight: bold; }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .sheet-status { font-size: 11px; color: #b7a476; margin-top: 8px; min-height: 14px; }
+  .sheet-status.ok { color: #7fdc7f; } .sheet-status.err { color: #ff8a9a; }
+
   /* battle log ticker */
   #ticker {
     flex: 0 0 auto; margin: 0; padding: 8px 16px 10px;
@@ -116,6 +149,8 @@
   </div>
 
   <div id="ticker"><div id="tickerLines"></div><span class="cursor">▼</span></div>
+
+  <div id="sheetOverlay"><div class="sheet" id="sheetBody"></div></div>
 
   <div id="splash"><div class="t1">⚔ AI-HQ ⚔</div><div class="t2">GUILD OF AGENTS</div><div class="t3">▶ PRESS TO BEGIN</div></div>
 
@@ -539,6 +574,7 @@ blog('The guild doors creak open… heroes report for duty.');
 // ---------- entities ----------
 const heroes = new Map();    // sessionId -> hero
 const parties = new Map();   // wkey -> {key, proj, site, monster, members[], sumTokens, counterNext, victoryAt}
+const lastSessions = new Map(); // sessionId -> latest full server session (for the hero sheet)
 const HALL_DOOR = { x: 9.9 * TILE, y: 10.6 * TILE };
 // formation offsets (tiles) around a site, strongest hero at the front
 const FORM = [[-1.15, 0], [-1.95, -0.55], [-1.95, 0.55], [-2.75, -0.95], [-2.75, 0], [-2.75, 0.95], [-3.4, -0.5], [-3.4, 0.5]];
@@ -569,6 +605,7 @@ function makeHero(s) {
     attackStart: 0, autoNext: performance.now() + 1500 + Math.random() * 1500,
     tokens: 0, gold: 0, lvl: 1, xp: 0, quest: '', activity: '', waiting: false, ping: 0,
     wkey: null, bucket: 'rest',
+    stats: { strikes: 0, dmg: 0, crits: 0, misses: 0 }, // battle stats since this view opened
   };
 }
 
@@ -618,6 +655,7 @@ function syncHeroes(list) {
       blog(`${h.name} departs the guild…`);
       release(restOwner, id); release(boardOwner, id); release(dummyOwner, id);
       heroes.delete(id);
+      lastSessions.delete(id);
     }
   }
 
@@ -643,6 +681,7 @@ function syncHeroes(list) {
     h.activity = s.activity || '';
     h.wkey = wkeyOf(s);
     h.proj = projName(s);
+    lastSessions.set(s.sessionId, s);
     const active = ['working', 'thinking', 'starting'].includes(s.state);
     const wasWaiting = h.waiting;
     h.waiting = !!s.needsAttention;
@@ -779,6 +818,7 @@ function battleAction(sessionId, tool) {
 
   // 8% comedy miss on heavy swings
   if (heavy && Math.random() < 0.08) {
+    h.stats.misses++;
     blog(pick([
       `${h.name}'s attack misses! ${mName} snickers.`,
       `${h.name} swings mightily… and hits a tree.`,
@@ -790,6 +830,9 @@ function battleAction(sessionId, tool) {
 
   const dmg = Math.round((heavy ? 600 : 150) + Math.random() * (heavy ? 2600 : 700));
   const crit = Math.random() < 0.1;
+  h.stats.strikes++;
+  h.stats.dmg += crit ? dmg * 2 : dmg;
+  if (crit) h.stats.crits++;
   const fl = TOOL_FLAVOR.find(([re]) => re.test((tool || '').toLowerCase()));
   let line = fl ? pick(fl[1])(h, mName) : `${h.name} attacks ${mName}`;
   if (heavy || !fl) line += ` — ${dmg}${crit ? ' CRIT' : ''} dmg!`;
@@ -840,7 +883,7 @@ function updateQuestPanel() {
     r.onclick = () => {
       const h = heroes.get(r.dataset.id);
       if (h) h.ping = performance.now();
-      fetch('/focus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: r.dataset.id }) }).catch(() => {});
+      openHeroSheet(r.dataset.id);
     };
   });
 }
@@ -1075,6 +1118,166 @@ function drawMonster(party, st, now) {
   connect();
   fetch('/sessions').then(r => r.json()).then(syncHeroes).catch(() => {});
 })();
+
+// ---------- hero character sheet ----------
+// Click a hero (on the map or in the quest log) -> RPG status screen with the
+// real work summary + performance: quest, last words, career stats, skill
+// usage (tool breakdown), and how they've waited on their master.
+let respRows = [];
+function refreshResponses() {
+  fetch('/responses').then(r => r.json()).then(rows => { if (Array.isArray(rows)) respRows = rows; }).catch(() => {});
+}
+refreshResponses();
+setInterval(refreshResponses, 60000);
+
+const sheetOverlay = document.getElementById('sheetOverlay');
+const sheetBody = document.getElementById('sheetBody');
+let openHeroId = null;
+
+function durS(ms) {
+  const s = Math.max(0, Math.round((+ms || 0) / 1000));
+  if (s >= 3600) return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+  if (s >= 60) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+  return s + 's';
+}
+const TOOL_ICONS = [
+  [/edit|write|notebook/i, '⚔'], [/bash|shell|powershell/i, '🔮'], [/read/i, '📖'],
+  [/grep|glob|search/i, '🔍'], [/task|agent/i, '🧙'], [/webfetch|websearch|fetch/i, '🔭'], [/todo/i, '📜'],
+];
+function toolIcon(name) { const f = TOOL_ICONS.find(([re]) => re.test(name)); return f ? f[1] : '🛠'; }
+
+function openHeroSheet(id) {
+  openHeroId = id;
+  renderHeroSheet();
+  sheetOverlay.classList.add('open');
+}
+function closeHeroSheet() { openHeroId = null; sheetOverlay.classList.remove('open'); }
+sheetOverlay.addEventListener('click', (e) => { if (e.target === sheetOverlay) closeHeroSheet(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHeroSheet(); });
+
+function renderHeroSheet() {
+  const h = heroes.get(openHeroId);
+  if (!h) { closeHeroSheet(); return; }
+  const s = lastSessions.get(openHeroId) || {};
+  const party = parties.get(h.wkey);
+  const m = party && party.monster && !party.monster.dying ? party.monster : null;
+
+  // state line
+  const stateTxt = h.waiting ? '⏳ Kneeling — calls for their master!'
+    : h.mode === 'fight' && m ? `⚔ Battling ${m.name} (${Math.round((m.hp / m.maxHp) * 100)}% HP)${m.isBoss ? ' ☠ WORLD BOSS' : ''}`
+    : h.mode === 'train' ? '🎯 Training at the dummies'
+    : h.mode === 'walk' ? '🚶 On the road'
+    : '🍺 Resting at the inn';
+  const partyTxt = party && party.members.length > 1 ? ` · party of ${party.members.length}` : '';
+
+  // master calls (response history for this hero)
+  const mine = respRows.filter(r => r.sessionId === openHeroId);
+  const answered = mine.filter(r => ['reply', 'resumed', 'focus'].includes(r.via));
+  const ignored = mine.length - answered.length;
+  const medWait = answered.length
+    ? answered.map(r => r.waitedMs).sort((a, b) => a - b)[Math.floor(answered.length / 2)]
+    : null;
+
+  // skills from the real tool breakdown
+  const skills = Object.entries(s.toolBreakdown || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxSkill = skills.length ? skills[0][1] : 1;
+
+  const tok = s.tokens || {};
+  const critRate = h.stats.strikes ? Math.round((h.stats.crits / h.stats.strikes) * 100) : 0;
+
+  // preserve last-words scroll across live re-renders
+  const prevLast = sheetBody.querySelector('.slast');
+  const lastScroll = prevLast ? prevLast.scrollTop : 0;
+
+  sheetBody.innerHTML = `
+    <div class="sheet-head">
+      <div class="sheet-emb" style="background:${h.color}">${h.cls.icon}</div>
+      <div>
+        <div class="sheet-name">${esc(h.name)} <span style="color:#c9a227">Lv.${h.lvl}</span></div>
+        <div class="sheet-sub">${h.cls.title}${h.lvl >= 30 ? ' 👑' : h.lvl >= 20 ? ' ✨' : h.lvl >= 10 ? ' 🎗' : ''} · ${esc(s.model || 'unknown')} · ${esc(s.ide || '?')}${s.source === 'cowork' ? ' · 🤝 cowork' : ''}</div>
+      </div>
+      <button class="sheet-close" onclick="closeHeroSheet()">×</button>
+    </div>
+    <div class="sheet-xp" title="XP to next level"><i style="width:${Math.round(h.xp * 100)}%"></i></div>
+
+    <h4>📜 Current quest</h4>
+    <div class="squest">
+      ${esc(String(h.quest || '—'))}
+      <div class="dim" style="margin-top:6px">🏰 ${esc(s.title || h.proj)} · ${stateTxt}${partyTxt}</div>
+      ${s.activity ? `<div class="dim">⚡ ${esc(s.activity)}</div>` : ''}
+      ${s.cwd ? `<div class="dim" style="opacity:.7">📂 ${esc(s.cwd)}</div>` : ''}
+    </div>
+
+    ${s.lastMessage ? `<h4>💬 Last words</h4><div class="slast">${esc(s.lastMessage)}</div>` : ''}
+
+    <h4>📈 Career</h4>
+    <div class="sgrid">
+      <div class="sstat"><div class="v">${Math.round(h.gold).toLocaleString()}g</div><div class="l">Gold (labor)</div></div>
+      <div class="sstat"><div class="v">${fmt(tok.total || 0)}</div><div class="l">Mana (tokens)</div></div>
+      <div class="sstat"><div class="v">$${(s.cost || 0).toFixed(2)}</div><div class="l">API cost</div></div>
+      <div class="sstat"><div class="v">${((s.activeMs || 0) / 3600000).toFixed(1)}h</div><div class="l">Active work</div></div>
+      <div class="sstat"><div class="v">${s.messages || 0}</div><div class="l">Messages</div></div>
+      <div class="sstat"><div class="v">${s.toolCount || 0}</div><div class="l">Tool strikes</div></div>
+      <div class="sstat"><div class="v">${s.startTime ? durS(Date.now() - new Date(s.startTime)) : '—'}</div><div class="l">Uptime</div></div>
+      <div class="sstat"><div class="v">${fmt(h.stats.dmg)}</div><div class="l">Dmg (this view)</div></div>
+      <div class="sstat"><div class="v">${critRate}% / ${h.stats.misses}</div><div class="l">Crit rate / misses</div></div>
+    </div>
+
+    ${skills.length ? `<h4>🎯 Skills</h4>` + skills.map(([name, n]) =>
+      `<div class="skillbar" title="${esc(name)}"><span class="sn">${toolIcon(name)} ${esc(name.split('__').pop())}</span><span class="sb" style="width:${Math.round((n / maxSkill) * 200) + 4}px"></span><span class="sv">×${n}</span></div>`
+    ).join('') : ''}
+
+    <h4>🙋 Master calls</h4>
+    <div class="squest">${mine.length
+      ? `Answered <b style="color:#7fdc7f">${answered.length}</b> · Ignored <b style="color:${ignored ? '#ff8a9a' : '#b7a476'}">${ignored}</b>${medWait != null ? ` · Median wait <b style="color:#ffd76a">${durS(medWait)}</b>` : ''}${h.waiting && h.mode !== 'walk' ? ' · <b style="color:#ffcf5a">waiting right now!</b>' : ''}`
+      : 'No calls recorded yet — stats appear once this hero waits for you.'}</div>
+
+    <div class="sheet-actions">
+      <span class="rpg-btn" id="sheetFocus">⤢ Summon window</span>
+      <span class="rpg-btn" id="sheetFolder">📂 Open lair</span>
+      <span class="sheet-status" id="sheetStatus"></span>
+    </div>`;
+
+  const newLast = sheetBody.querySelector('.slast');
+  if (newLast) newLast.scrollTop = lastScroll;
+  const status = (msg, ok) => { const el = document.getElementById('sheetStatus'); if (el) { el.textContent = msg; el.className = 'sheet-status ' + (ok ? 'ok' : 'err'); } };
+  document.getElementById('sheetFocus').onclick = () => {
+    status('Summoning…', true);
+    fetch('/focus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: openHeroId }) })
+      .then(r => r.json()).then(d => status(d.ok ? 'Window summoned.' : `Couldn't: ${d.reason || d.result || 'unknown'}`, d.ok))
+      .catch(() => status('Summon failed.', false));
+  };
+  document.getElementById('sheetFolder').onclick = () => {
+    fetch('/open-folder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: openHeroId }) })
+      .then(r => r.json()).then(d => status(d.ok ? 'Lair opened.' : `Couldn't: ${d.reason || 'error'}`, d.ok))
+      .catch(() => status('Open failed.', false));
+  };
+}
+// keep the sheet live while open (uptime ticks, battle stats, state changes)
+setInterval(() => { if (openHeroId && sheetOverlay.classList.contains('open')) renderHeroSheet(); }, 1500);
+
+// click a hero on the map -> open their sheet (hover shows a pointer)
+function heroAtPoint(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  if (!r.width) return null;
+  const x = (clientX - r.left) * (WORLD_W / r.width);
+  const y = (clientY - r.top) * (WORLD_H / r.height);
+  let best = null, bd = Infinity;
+  for (const h of heroes.values()) {
+    if (x > h.x - 26 && x < h.x + 26 && y > h.y - 80 && y < h.y + 8) {
+      const d = Math.hypot(x - h.x, y - (h.y - 32));
+      if (d < bd) { bd = d; best = h; }
+    }
+  }
+  return best;
+}
+canvas.addEventListener('click', (e) => {
+  const h = heroAtPoint(e.clientX, e.clientY);
+  if (h) { h.ping = performance.now(); openHeroSheet(h.id); }
+});
+canvas.addEventListener('mousemove', (e) => {
+  canvas.style.cursor = heroAtPoint(e.clientX, e.clientY) ? 'pointer' : 'default';
+});
 
 // ---------- chrome: splash, toggles, embedded nav ----------
 const splash = document.getElementById('splash');
