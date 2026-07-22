@@ -2,39 +2,41 @@
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#232c52"/>
-      <stop offset="1" stop-color="#121328"/>
+      <stop offset="1" stop-color="#0e1024"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#ffcd5a" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#ffcd5a" stop-opacity="0"/>
+      <stop offset="0" stop-color="#ffd873" stop-opacity=".9"/>
+      <stop offset=".6" stop-color="#ffb43a" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#ffb43a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="moon" cx="0.42" cy="0.36" r="0.72">
+      <stop offset="0" stop-color="#ffe7a0"/>
+      <stop offset=".7" stop-color="#f6b43f"/>
+      <stop offset="1" stop-color="#e0952b"/>
     </radialGradient>
   </defs>
-  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
-  <!-- beacon -->
-  <circle cx="256" cy="84" r="52" fill="url(#glow)"/>
-  <rect x="253" y="84" width="6" height="60" fill="#4054a0"/>
-  <circle cx="256" cy="84" r="15" fill="#ffcd5a"/>
-  <!-- tower -->
-  <rect x="148" y="143" width="216" height="292" fill="#2f3e6b"/>
-  <rect x="148" y="143" width="18" height="292" fill="#4054a0"/>
-  <rect x="346" y="143" width="18" height="292" fill="#1f2a4e"/>
-  <rect x="148" y="143" width="216" height="13" fill="#4054a0"/>
-  <!-- windows: b=blue g=gold .=off -->
-  <g>
-    <rect x="182" y="182" width="40" height="34" fill="#5b8cff"/>
-    <rect x="236" y="182" width="40" height="34" fill="#181e38"/>
-    <rect x="290" y="182" width="40" height="34" fill="#5b8cff"/>
-    <rect x="182" y="238" width="40" height="34" fill="#ffbe4a"/>
-    <rect x="236" y="238" width="40" height="34" fill="#5b8cff"/>
-    <rect x="290" y="238" width="40" height="34" fill="#5b8cff"/>
-    <rect x="182" y="294" width="40" height="34" fill="#5b8cff"/>
-    <rect x="236" y="294" width="40" height="34" fill="#5b8cff"/>
-    <rect x="290" y="294" width="40" height="34" fill="#181e38"/>
-    <rect x="182" y="350" width="40" height="34" fill="#5b8cff"/>
-    <rect x="236" y="350" width="40" height="34" fill="#ffbe4a"/>
-    <rect x="290" y="350" width="40" height="34" fill="#5b8cff"/>
+
+  <!-- backdrop + beacon -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="206" r="168" fill="url(#glow)"/>
+  <circle cx="256" cy="206" r="118" fill="url(#moon)"/>
+
+  <!-- spire rising into the lower beacon -->
+  <polygon points="232,478 280,478 273,300 239,300" fill="#0a0d1c"/>
+  <polygon points="239,300 273,300 256,272" fill="#0a0d1c"/>
+  <rect x="234" y="256" width="44" height="8" fill="#0a0d1c"/>
+  <rect x="246" y="322" width="11" height="15" fill="#ffcd5a"/>
+  <rect x="259" y="356" width="11" height="15" fill="#ffcd5a" opacity=".8"/>
+
+  <!-- raven, perched in profile, silhouetted on the beacon -->
+  <g fill="#0a0d1c">
+    <polygon points="304,188 372,204 360,232 298,222"/>              <!-- long wedge tail -->
+    <ellipse cx="264" cy="203" rx="60" ry="34"/>                      <!-- body -->
+    <polygon points="196,184 232,154 256,198 222,214"/>              <!-- neck -->
+    <path d="M196 150 C176 150 172 168 176 180 L216 180 C220 162 214 150 196 150 Z"/> <!-- head, flat corvid crown -->
+    <polygon points="180,158 134,170 180,182"/>                      <!-- long heavy beak -->
+    <polygon points="180,182 202,190 198,176"/>                      <!-- throat hackle -->
+    <rect x="248" y="232" width="5" height="28"/>                    <!-- leg -->
+    <rect x="270" y="232" width="5" height="28"/>                    <!-- leg -->
   </g>
-  <!-- doorway -->
-  <rect x="233" y="399" width="46" height="36" fill="#7896dc"/>
-  <rect x="245" y="399" width="22" height="36" fill="#5b76b0"/>
 </svg>
