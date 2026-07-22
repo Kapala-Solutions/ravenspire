@@ -8,6 +8,8 @@ Zero build. Zero frameworks. One `npm start`.
 
 ![Ravenspire — the quest world](ravenspire-rpg.png)
 
+▶️ **[Watch the 40-second demo](docs/demo/ravenspire-demo.mp4)** — the quest world, the control panel, Claude + Codex side by side, and response analytics.
+
 ---
 
 ## Why

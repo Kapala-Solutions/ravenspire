@@ -12,3 +12,7 @@ responses.jsonl
 .playwright-mcp/
 .claude/settings.local.json
 *.log
+
+# demo recording: keep the mp4, drop the regenerable webm + seed transcripts
+docs/demo/*.webm
+scripts/tx/
