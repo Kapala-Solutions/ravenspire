@@ -110,6 +110,34 @@ if ($Type -in @('SessionStart', 'UserPromptSubmit', 'Stop', 'Notification')) {
             $cur = $ppid
         }
         $windowChain = ($chain -join '>')
+
+        # Fallback: Windows Terminal as the default terminal breaks the tree walk
+        # (the console's window belongs to WindowsTerminal.exe, which is NOT an
+        # ancestor — the shell's parent is explorer). But on UserPromptSubmit the
+        # user literally just pressed Enter in this session's window, so the
+        # foreground window IS the right one. Capture it.
+        if ($windowPid -eq 0 -and $Type -eq 'UserPromptSubmit') {
+            Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class AqFg {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+}
+"@ -ErrorAction SilentlyContinue
+            $fgPid = [uint32]0
+            [AqFg]::GetWindowThreadProcessId([AqFg]::GetForegroundWindow(), [ref]$fgPid) | Out-Null
+            if ($fgPid -gt 0) {
+                $fp = Get-Process -Id $fgPid -ErrorAction SilentlyContinue
+                $fnm = if ($fp) { $fp.ProcessName.ToLower() } else { '' }
+                if ($fp -and $fp.MainWindowHandle -ne 0 -and ($exclude -notcontains $fnm)) {
+                    $windowPid = [int]$fgPid
+                    $windowName = $fnm
+                    $windowTitle = $fp.MainWindowTitle
+                    $windowChain = $windowChain + '>fg:' + $fnm
+                }
+            }
+        }
     } catch {}
 }
 
