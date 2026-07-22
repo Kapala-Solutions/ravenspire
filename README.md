@@ -43,7 +43,7 @@ Ravenspire solves both: it's a real operations panel (cost, labor value, alerts,
 
 ## 🚀 Quick start
 
-Requirements: **Node 18+**, and [Claude Code](https://claude.com/claude-code) (any surface: CLI, VS Code, Claude Desktop).
+Requirements: **Node 18+**, and [Claude Code](https://claude.com/claude-code) (any surface: CLI, VS Code, Claude Desktop). On **macOS/Linux**, also install [PowerShell 7 (`pwsh`)](https://github.com/PowerShell/PowerShell) — the hook scripts run through it, and `npm run setup` uses it automatically. (Windows has it built in.)
 
 ```bash
 git clone https://github.com/Kapala-Solutions/ravenspire.git
