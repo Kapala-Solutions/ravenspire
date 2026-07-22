@@ -847,7 +847,7 @@ server.listen(PORT, '0.0.0.0', () => {
   }
   console.log(`
 +--------------------------------------------------+
-|              ⚔  A G E N T Q U E S T  ⚔           |
+|              ⚔  R A V E N S P I R E  ⚔           |
 +--------------------------------------------------+
   Quest world:   http://localhost:${PORT}
   Control panel: http://localhost:${PORT}/dashboard
