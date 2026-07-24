@@ -112,11 +112,15 @@ setInterval(() => appendHistory('tick'), 60000);
 // Server-side notifications: native Windows toast + optional phone push.
 // These fire from the server so alerts reach the user with no browser open.
 // ---------------------------------------------------------------------------
-function sendToast(title, body) {
+function sendToast(title, body, sessionId) {
   if (!CONFIG.notify.toast || process.platform !== 'win32') return;
   const script = path.join(__dirname, 'notify.ps1');
-  execFile('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script, '-Title', title, '-Body', body],
-    { timeout: 8000 }, () => {});
+  const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script, '-Title', title, '-Body', body,
+    '-Logo', path.join(__dirname, 'icon-192.png')];
+  // A session id makes the toast clickable — clicking it focuses that agent's window
+  // (via the ravenspire: protocol → /focus). Needs `npm run setup:notify` once.
+  if (sessionId) args.push('-SessionId', String(sessionId), '-Server', `http://127.0.0.1:${PORT}`);
+  execFile('powershell', args, { timeout: 8000 }, () => {});
 }
 
 // Minimal dependency-free HTTP(S) POST (fire and forget).
@@ -151,7 +155,7 @@ function sendPush(title, body) {
 function notifyAlert(s, kind) {
   const title = kind === 'remind' ? `⏳ Still waiting: ${s.name}` : `🔔 ${s.name} needs you`;
   const body = `${s.attentionReason || 'Waiting for input'} · ${s.title || ''}`;
-  sendToast(title, body);
+  sendToast(title, body, s.sessionId);
   sendPush(title, body);
 }
 
