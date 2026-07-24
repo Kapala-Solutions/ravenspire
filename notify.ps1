@@ -23,9 +23,12 @@ try {
     $appId = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
 
     # Click action: only wire it up when we know which session to focus.
+    # Launch an http URL (not a custom scheme): the browser/PWA always handles
+    # http, so there's no "no app to open this link" dialog. The server's
+    # /focus-click endpoint brings the window forward and the tab self-closes.
     $toastAttrs = 'activationType="foreground"'
     if ($SessionId) {
-        $launch = "ravenspire:focus?session=$([uri]::EscapeDataString($SessionId))&server=$([uri]::EscapeDataString($Server))"
+        $launch = "$Server/focus-click?session=$([uri]::EscapeDataString($SessionId))"
         $launchXml = $launch -replace '&', '&amp;'   # valid inside an XML attribute
         $toastAttrs = "activationType=""protocol"" launch=""$launchXml"""
     }

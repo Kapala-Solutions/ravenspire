@@ -226,6 +226,33 @@ function archiveSession(s, reason) {
   }
 }
 
+// Minimal HTML escaper for the tiny /focus-click response page.
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Bring a session's window to the front (or deep-link Claude Desktop). Shared by
+// POST /focus (dashboard cards) and GET /focus-click (a clicked toast).
+function performFocus(s, done) {
+  if (!s) return done({ ok: false, reason: 'unknown session' });
+  if (s.host && s.host.toLowerCase() !== os.hostname().toLowerCase()) return done({ ok: false, reason: `runs on ${s.host}, not this machine` });
+  // Clicking a session = acknowledging it; clear the alert.
+  if (s.needsAttention) { recordResponse(s, 'focus'); s.needsAttention = false; s.attentionReason = null; s.waitingSince = null; saveState(); broadcast(); }
+  // Claude Desktop: open the exact conversation via deep link (better than window focus).
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.sessionId || '');
+  if (s.ide === 'claude-desktop' && isUuid) {
+    execFile('powershell', ['-NoProfile', '-Command', `Start-Process 'claude://resume?session=${s.sessionId}'`],
+      { timeout: 4000 }, (err) => done({ ok: !err, result: err ? err.message : 'deeplink' }));
+    return;
+  }
+  // Terminals / IDEs: bring the captured window to the front.
+  if (!s.windowPid) return done({ ok: false, reason: 'window not known yet — interact with that session once' });
+  const script = path.join(__dirname, 'focus-window.ps1');
+  execFile('powershell', ['-ExecutionPolicy', 'Bypass', '-File', script, '-WindowPid', String(s.windowPid)],
+    { timeout: 4000 }, (err, stdout) => {
+      const out = (stdout || '').trim();
+      done({ ok: !err && out === 'focused', result: out || (err && err.message) });
+    });
+}
+
 // Sweep stale sessions so a crashed/closed session doesn't linger as "working"
 // or keep a stuck alert pulsing forever.
 setInterval(() => {
@@ -514,29 +541,24 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       let s;
       try { s = sessions.get(JSON.parse(body).sessionId); } catch {}
-      const reply = (obj) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
-      if (!s) return reply({ ok: false, reason: 'unknown session' });
-      if (s.host && s.host.toLowerCase() !== os.hostname().toLowerCase()) return reply({ ok: false, reason: `runs on ${s.host}, not this machine` });
-      // Clicking a session = acknowledging it; clear the alert.
-      if (s.needsAttention) { recordResponse(s, 'focus'); s.needsAttention = false; s.attentionReason = null; s.waitingSince = null; saveState(); broadcast(); }
+      performFocus(s, (r) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(r)); });
+    });
+    return;
+  }
 
-      // Claude Desktop: open the exact session/conversation via deep link
-      // (claude://resume?session=<uuid> -> importCliSession). Better than window focus.
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.sessionId || '');
-      if (s.ide === 'claude-desktop' && isUuid) {
-        execFile('powershell', ['-NoProfile', '-Command', `Start-Process 'claude://resume?session=${s.sessionId}'`],
-          { timeout: 4000 }, (err) => reply({ ok: !err, result: err ? err.message : 'deeplink' }));
-        return;
-      }
-
-      // Terminals / IDEs: bring the captured window to the front.
-      if (!s.windowPid) return reply({ ok: false, reason: 'window not known yet — interact with that session once' });
-      const script = path.join(__dirname, 'focus-window.ps1');
-      execFile('powershell', ['-ExecutionPolicy', 'Bypass', '-File', script, '-WindowPid', String(s.windowPid)],
-        { timeout: 4000 }, (err, stdout) => {
-          const out = (stdout || '').trim();
-          reply({ ok: !err && out === 'focused', result: out || (err && err.message) });
-        });
+  // Clicked toast → focus that agent's window. Toasts launch this http URL
+  // (http always has a handler — a custom scheme gets blocked by the PWA/Edge
+  // activation context), then the little tab reports and self-closes.
+  if (req.method === 'GET' && req.url.startsWith('/focus-click')) {
+    let sid = '';
+    try { sid = new URL(req.url, 'http://localhost').searchParams.get('session') || ''; } catch {}
+    const s = sessions.get(sid);
+    performFocus(s, (r) => {
+      const msg = r.ok
+        ? `Brought <b>${esc((s && s.name) || 'the agent')}</b> to the front.`
+        : `Couldn't focus: ${esc(r.reason || r.result || 'unknown')}`;
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(`<!doctype html><meta charset="utf-8"><title>Ravenspire</title><body style="margin:0;background:#0e1024;color:#e6ebf5;font:16px system-ui,Segoe UI,sans-serif;display:grid;place-items:center;height:100vh"><div style="text-align:center;line-height:1.6"><div style="font-size:40px">🐦‍⬛</div>${msg}<br><small style="opacity:.55">You can close this tab.</small></div><script>setTimeout(function(){window.close();},500);</script></body>`);
     });
     return;
   }
